@@ -321,6 +321,26 @@ class ClimateAnalysis:
         
         return stats
 
+    def save_plot(self, fig, filename):
+        """Save a Plotly figure to HTML with proper configuration."""
+        if not os.path.exists('outputs'):
+            os.makedirs('outputs')
+        
+        # Configure the plot for serving
+        fig.update_layout(
+            template="plotly_dark",
+            showlegend=True,
+            hovermode='x unified'
+        )
+        
+        # Save with CDN resources
+        fig.write_html(
+            f'outputs/{filename}',
+            include_plotlyjs='cdn',
+            full_html=True,
+            config={'responsive': True}
+        )
+
 if __name__ == "__main__":
     # Initialize analysis
     analysis = ClimateAnalysis()
@@ -331,15 +351,15 @@ if __name__ == "__main__":
     # Generate and save visualizations
     temp_trend = analysis.plot_global_temperature_trend()
     if temp_trend:
-        temp_trend.write_html("outputs/temperature_trend.html")
+        analysis.save_plot(temp_trend, "temperature_trend.html")
     
     monthly_trends = analysis.plot_monthly_trends()
     if monthly_trends:
-        monthly_trends.write_html("outputs/monthly_trends.html")
+        analysis.save_plot(monthly_trends, "monthly_trends.html")
     
     decadal_changes = analysis.calculate_decadal_changes()
     if decadal_changes:
-        decadal_changes.write_html("outputs/decadal_changes.html")
+        analysis.save_plot(decadal_changes, "decadal_changes.html")
     
     # Calculate and save statistics
     stats = analysis.calculate_statistics()
