@@ -186,7 +186,7 @@ class ClimateGUI:
         """Plot monthly trends using matplotlib"""
         ax = self.fig.add_subplot(111)
         ax.set_facecolor('#1a1a1a')
-        
+                    
         months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         
