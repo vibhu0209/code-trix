@@ -166,6 +166,9 @@ These decadal changes represent fundamental shifts in our climate system that wi
         # Initialize climate analysis
         self.analysis = ClimateAnalysis()
         
+        # Temperature unit (Celsius by default)
+        self.temp_unit = tk.StringVar(value='Celsius')
+        
         # Create main frame
         self.main_frame = ttk.Frame(self.root, padding="20", style='Main.TFrame')
         self.main_frame.pack(fill=tk.BOTH, expand=True)
@@ -178,6 +181,9 @@ These decadal changes represent fundamental shifts in our climate system that wi
                              bg='#2c3e50',
                              pady=20)
         title_label.pack(fill=tk.X)
+        
+        # Create control panel
+        self.create_control_panel()
         
         # Create buttons frame
         self.button_frame = ttk.Frame(self.main_frame, style='Button.TFrame')
@@ -248,6 +254,332 @@ These decadal changes represent fundamental shifts in our climate system that wi
         # Show initial plot
         self.show_plot("temperature")
     
+    def create_control_panel(self):
+        """Create control panel with interactive features"""
+        control_frame = ttk.Frame(self.main_frame, style='Button.TFrame')
+        control_frame.pack(fill=tk.X, pady=10)
+        
+        # Temperature unit selector
+        unit_frame = ttk.Frame(control_frame, style='Button.TFrame')
+        unit_frame.pack(side=tk.LEFT, padx=10)
+        
+        unit_label = tk.Label(unit_frame, text="Temperature Unit:",
+                            fg='white', bg='#2c3e50')
+        unit_label.pack(side=tk.LEFT, padx=5)
+        
+        celsius_btn = ttk.Radiobutton(unit_frame, text="Celsius",
+                                    variable=self.temp_unit,
+                                    value='Celsius',
+                                    command=self.update_temperature_unit)
+        celsius_btn.pack(side=tk.LEFT, padx=5)
+        
+        fahrenheit_btn = ttk.Radiobutton(unit_frame, text="Fahrenheit",
+                                       variable=self.temp_unit,
+                                       value='Fahrenheit',
+                                       command=self.update_temperature_unit)
+        fahrenheit_btn.pack(side=tk.LEFT, padx=5)
+        
+        # Export button
+        export_btn = RoundedButton(control_frame, text="Export Graph",
+                                 command=self.export_graph)
+        export_btn.pack(side=tk.RIGHT, padx=10)
+        
+        # Animation button
+        animate_btn = RoundedButton(control_frame, text="Animate Temperature",
+                                  command=self.animate_temperature)
+        animate_btn.pack(side=tk.RIGHT, padx=10)
+    
+    def update_temperature_unit(self):
+        """Update temperature unit and refresh the current plot"""
+        current_plot = self.current_plot if hasattr(self, 'current_plot') else "temperature"
+        self.show_plot(current_plot)
+    
+    def export_graph(self):
+        """Export current graph as an image"""
+        file_path = tk.filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[("PNG files", "*.png"),
+                      ("JPEG files", "*.jpg"),
+                      ("PDF files", "*.pdf")],
+            title="Export Graph As"
+        )
+        if file_path:
+            self.fig.savefig(file_path, 
+                           facecolor=self.fig.get_facecolor(),
+                           edgecolor='none',
+                           bbox_inches='tight',
+                           pad_inches=0.1)
+            messagebox.showinfo("Success", "Graph exported successfully!")
+    
+    def animate_temperature(self):
+        """Create an animation of temperature changes over time"""
+        if not hasattr(self, 'current_plot'):
+            return
+            
+        # Remove existing reset button if it exists
+        if hasattr(self, 'reset_btn'):
+            self.reset_btn.destroy()
+            
+        # Clear current plot
+        self.fig.clear()
+        
+        if self.current_plot == "temperature":
+            self.animate_temperature_trends()
+        elif self.current_plot == "monthly":
+            self.animate_monthly_trends()
+        elif self.current_plot == "seasonal":
+            self.animate_seasonal_analysis()
+        elif self.current_plot == "decadal":
+            self.animate_decadal_changes()
+            
+        # Add a single reset button
+        reset_btn = RoundedButton(self.main_frame, text="Reset View",
+                                command=lambda: self.show_plot(self.current_plot))
+        reset_btn.pack(side=tk.TOP, pady=5)
+        self.reset_btn = reset_btn
+        
+    def animate_temperature_trends(self):
+        """Animate temperature trends plot"""
+        ax = self.fig.add_subplot(111)
+        ax.set_facecolor('#34495e')
+        
+        years = self.analysis.df['Year'].values
+        temps = self.analysis.df['annual_temp'].values
+        
+        # Convert temperature if needed
+        if self.temp_unit.get() == 'Fahrenheit':
+            temps = self.celsius_to_fahrenheit(temps)
+        
+        # Set up the plot
+        ax.set_xlim(years.min(), years.max())
+        ax.set_ylim(temps.min() - 0.1, temps.max() + 0.1)
+        line, = ax.plot([], [], color='#3498db', linewidth=2)
+        
+        ax.set_title('Temperature Change Animation', color='white')
+        ax.set_xlabel('Year', color='white')
+        ax.set_ylabel(f'Temperature (°{self.temp_unit.get()[0]})', color='white')
+        ax.grid(True, alpha=0.2)
+        ax.tick_params(colors='white')
+        
+        for spine in ax.spines.values():
+            spine.set_color('#3498db')
+        
+        def animate(frame):
+            if frame > 0:
+                line.set_data(years[:frame], temps[:frame])
+            return [line]
+        
+        self.anim = FuncAnimation(
+            self.fig, animate, frames=len(years) + 1,
+            interval=50, blit=True, repeat=False
+        )
+        self.canvas.draw()
+        
+    def animate_seasonal_analysis(self):
+        """Animate seasonal analysis plot"""
+        seasons = {
+            'DJF': 'Winter (Dec-Feb)',
+            'MAM': 'Spring (Mar-May)',
+            'JJA': 'Summer (Jun-Aug)',
+            'SON': 'Autumn (Sep-Nov)'
+        }
+        years = self.analysis.df['Year'].values
+        
+        self.fig.suptitle('Seasonal Temperature Patterns', color='white', 
+                         y=0.95, font={'size': 14, 'weight': 'normal'})
+        
+        colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f']
+        lines = []
+        
+        for i, ((season_code, season_name), color) in enumerate(zip(seasons.items(), colors), 1):
+            ax = self.fig.add_subplot(2, 2, i)
+            ax.set_facecolor('#34495e')
+            temps = self.analysis.df[season_code].values
+            
+            # Convert temperature if needed
+            if self.temp_unit.get() == 'Fahrenheit':
+                temps = self.celsius_to_fahrenheit(temps)
+            
+            ax.set_xlim(years.min(), years.max())
+            ax.set_ylim(min(temps) - 0.1, max(temps) + 0.1)
+            line, = ax.plot([], [], color=color, linewidth=2)
+            lines.append(line)
+            
+            ax.set_title(season_name, color='white')
+            ax.set_xlabel('Year', color='white')
+            ax.set_ylabel(f'Temperature (°{self.temp_unit.get()[0]})', color='white')
+            ax.grid(True, alpha=0.2)
+            ax.tick_params(colors='white')
+            
+            for spine in ax.spines.values():
+                spine.set_color('#3498db')
+        
+        def animate(frame):
+            if frame > 0:
+                for i, ((season_code, _), line) in enumerate(zip(seasons.items(), lines)):
+                    temps = self.analysis.df[season_code].values
+                    if self.temp_unit.get() == 'Fahrenheit':
+                        temps = self.celsius_to_fahrenheit(temps)
+                    line.set_data(years[:frame], temps[:frame])
+            return lines
+        
+        self.anim = FuncAnimation(
+            self.fig, animate, frames=len(years) + 1,
+            interval=50, blit=True, repeat=False
+        )
+        self.canvas.draw()
+        
+    def animate_monthly_trends(self):
+        """Animate monthly trends plot"""
+        ax = self.fig.add_subplot(111)
+        ax.set_facecolor('#34495e')
+        
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        data = self.analysis.df[months].values
+        
+        # Convert temperature if needed
+        if self.temp_unit.get() == 'Fahrenheit':
+            data = self.celsius_to_fahrenheit(data)
+            
+        years = self.analysis.df['Year'].values
+        
+        ax.set_title('Monthly Temperature Patterns', color='white')
+        ax.set_xlabel('Year', color='white')
+        ax.set_ylabel('Month', color='white')
+        ax.set_yticks(range(12))
+        ax.set_yticklabels(months, color='white')
+        
+        def animate(frame):
+            if frame > 0:
+                ax.clear()
+                ax.set_facecolor('#34495e')
+                im = ax.imshow(data[:frame].T, aspect='auto', cmap='RdYlBu_r',
+                             extent=[years[0], years[frame-1], -0.5, 11.5])
+                ax.set_title('Monthly Temperature Patterns', color='white')
+                ax.set_xlabel('Year', color='white')
+                ax.set_ylabel('Month', color='white')
+                ax.set_yticks(range(12))
+                ax.set_yticklabels(months, color='white')
+                ax.tick_params(colors='white')
+                for spine in ax.spines.values():
+                    spine.set_color('#3498db')
+                return [im]
+            return []
+        
+        self.anim = FuncAnimation(
+            self.fig, animate, frames=len(years) + 1,
+            interval=50, blit=True, repeat=False
+        )
+        self.canvas.draw()
+        
+    def animate_decadal_changes(self):
+        """Animate decadal changes plot"""
+        ax = self.fig.add_subplot(111)
+        ax.set_facecolor('#34495e')
+        
+        # Calculate decadal averages and statistics
+        self.analysis.df['Decade'] = (self.analysis.df['Year'] // 10) * 10
+        decadal_avg = self.analysis.df.groupby('Decade')['annual_temp'].mean()
+        decadal_std = self.analysis.df.groupby('Decade')['annual_temp'].std()
+        
+        # Convert temperature if needed
+        unit_symbol = '°F' if self.temp_unit.get() == 'Fahrenheit' else '°C'
+        if self.temp_unit.get() == 'Fahrenheit':
+            decadal_avg = self.celsius_to_fahrenheit(decadal_avg)
+            decadal_std = decadal_std * 9/5
+            
+        decades = decadal_avg.index.values
+        
+        # Set up the plot
+        ax.set_xlim(decades.min() - 5, decades.max() + 5)
+        ax.set_ylim(
+            (decadal_avg - decadal_std).min() - 0.2,
+            (decadal_avg + decadal_std).max() + 0.2
+        )
+        
+        # Initialize empty plots
+        line, = ax.plot([], [], color='#3498db', linewidth=2, marker='o', label='Decadal Average')
+        error_bars = ax.errorbar([], [], yerr=[], color='#3498db', capsize=5, capthick=2, fmt='none')
+        trend_line, = ax.plot([], [], color='#e74c3c', linestyle='--', linewidth=2)
+        
+        # Add labels and styling
+        ax.set_title('Decadal Temperature Changes', color='white', pad=20,
+                    font={'size': 14, 'weight': 'normal'})
+        ax.set_xlabel('Decade', color='white')
+        ax.set_ylabel(f'Temperature ({unit_symbol})', color='white')
+        ax.grid(True, alpha=0.2)
+        ax.tick_params(colors='white')
+        
+        for spine in ax.spines.values():
+            spine.set_color('#3498db')
+            
+        # Create text box for statistics
+        stats_box = ax.text(0.98, 0.98, "", transform=ax.transAxes,
+                           verticalalignment='top', horizontalalignment='right',
+                           color='white', fontsize=10,
+                           bbox=dict(boxstyle='round,pad=0.5', 
+                                   facecolor='#34495e', 
+                                   edgecolor='#3498db', 
+                                   alpha=0.9))
+        
+        def animate(frame):
+            if frame > 0:
+                current_decades = decades[:frame]
+                current_temps = decadal_avg.values[:frame]
+                current_stds = decadal_std.values[:frame]
+                
+                # Update line data
+                line.set_data(current_decades, current_temps)
+                
+                # Update error bars
+                error_bars.remove()
+                new_error_bars = ax.errorbar(current_decades, current_temps, 
+                                           yerr=current_stds,
+                                           color='#3498db', capsize=5, 
+                                           capthick=2, fmt='none')
+                error_bars.errorbar = new_error_bars
+                
+                # Update trend line
+                if len(current_decades) > 1:
+                    z = np.polyfit(current_decades, current_temps, 1)
+                    p = np.poly1d(z)
+                    trend_line.set_data(current_decades, p(current_decades))
+                    
+                    # Update statistics
+                    warming_rate = z[0]
+                    if len(current_temps) > 1:
+                        total_change = current_temps[-1] - current_temps[0]
+                        stats_text = (
+                            f"Warming Rate: {warming_rate:.4f}{unit_symbol}/decade\n"
+                            f"Total Change: {total_change:.2f}{unit_symbol}\n"
+                            f"Current Decade: {current_temps[-1]:.2f}{unit_symbol}"
+                        )
+                        stats_box.set_text(stats_text)
+                
+                # Add value labels
+                for txt in ax.texts:
+                    txt.remove()
+                for x, y in zip(current_decades, current_temps):
+                    ax.text(x, y + 0.02, f'{y:.2f}{unit_symbol}',
+                           ha='center', va='bottom', color='white')
+                
+                return [line, trend_line, stats_box] + new_error_bars.lines
+            return [line, trend_line, stats_box]
+        
+        self.anim = FuncAnimation(
+            self.fig, animate, frames=len(decades) + 1,
+            interval=500, blit=True, repeat=False
+        )
+        
+        # Add legend
+        ax.legend(facecolor='#34495e', edgecolor='white', loc='upper left')
+        self.canvas.draw()
+    
+    def celsius_to_fahrenheit(self, celsius):
+        """Convert Celsius to Fahrenheit"""
+        return (celsius * 9/5)
+    
     def animate_plot(self, ax, data, line, xdata, ydata):
         """Animate the plot with a smooth drawing effect"""
         def update(frame):
@@ -265,6 +597,7 @@ These decadal changes represent fundamental shifts in our climate system that wi
     
     def show_plot(self, plot_type):
         """Show the selected plot type"""
+        self.current_plot = plot_type  # Store current plot type
         try:
             if plot_type == "stats":
                 self.canvas.get_tk_widget().pack_forget()
@@ -300,6 +633,10 @@ These decadal changes represent fundamental shifts in our climate system that wi
         years = self.analysis.df['Year']
         temps = self.analysis.df['annual_temp']
         
+        # Convert temperature if needed
+        if self.temp_unit.get() == 'Fahrenheit':
+            temps = self.celsius_to_fahrenheit(temps)
+        
         # Plot temperature data
         ax.plot(years, temps, color='#3498db', linewidth=2, label='Annual Temperature')
         
@@ -307,17 +644,17 @@ These decadal changes represent fundamental shifts in our climate system that wi
         z = np.polyfit(years, temps, 1)
         p = np.poly1d(z)
         ax.plot(years, p(years), color='#e74c3c', linestyle='--', 
-                linewidth=2, label=f'Trend (slope: {z[0]:.4f}°C/year)')
+                linewidth=2, label=f'Trend (slope: {z[0]:.4f}°{self.temp_unit.get()[0]}/year)')
         
         # Add rolling average
-        rolling_avg = self.analysis.df['annual_temp'].rolling(window=10).mean()
+        rolling_avg = temps.rolling(window=10).mean()
         ax.plot(years, rolling_avg, color='#2ecc71', linewidth=2, 
                 label='10-Year Moving Average')
         
         ax.set_title('Global Temperature Anomalies', color='white', pad=20,
                     font={'size': 14, 'weight': 'normal'})
         ax.set_xlabel('Year', color='white')
-        ax.set_ylabel('Temperature Anomaly (°C)', color='white')
+        ax.set_ylabel(f'Temperature Anomaly (°{self.temp_unit.get()[0]})', color='white')
         ax.grid(True, alpha=0.2, color='#3498db')
         ax.legend(facecolor='#34495e', edgecolor='white')
         
@@ -373,18 +710,28 @@ These decadal changes represent fundamental shifts in our climate system that wi
     
     def plot_seasonal_analysis(self):
         """Plot seasonal temperature analysis"""
-        seasons = ['DJF', 'MAM', 'JJA', 'SON']
+        seasons = {
+            'DJF': 'Winter (Dec-Feb)',
+            'MAM': 'Spring (Mar-May)',
+            'JJA': 'Summer (Jun-Aug)',
+            'SON': 'Autumn (Sep-Nov)'
+        }
         years = self.analysis.df['Year']
+        unit_symbol = '°F' if self.temp_unit.get() == 'Fahrenheit' else '°C'
         
         self.fig.suptitle('Seasonal Temperature Patterns', color='white', 
                          y=0.95, font={'size': 14, 'weight': 'normal'})
         
         colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f']
         
-        for i, (season, color) in enumerate(zip(seasons, colors), 1):
+        for i, ((season_code, season_name), color) in enumerate(zip(seasons.items(), colors), 1):
             ax = self.fig.add_subplot(2, 2, i)
             ax.set_facecolor('#34495e')
-            temps = self.analysis.df[season]
+            temps = self.analysis.df[season_code]
+            
+            # Convert temperature if needed
+            if self.temp_unit.get() == 'Fahrenheit':
+                temps = self.celsius_to_fahrenheit(temps)
             
             # Plot temperature data
             ax.plot(years, temps, color=color, linewidth=2, label='Temperature')
@@ -393,11 +740,11 @@ These decadal changes represent fundamental shifts in our climate system that wi
             z = np.polyfit(years, temps, 1)
             p = np.poly1d(z)
             ax.plot(years, p(years), color='white', linestyle='--', 
-                   linewidth=2, label=f'Trend: {z[0]:.4f}°C/year')
+                   linewidth=2, label=f'Trend: {z[0]:.4f}{unit_symbol}/year')
             
-            ax.set_title(f'{season} Season', color='white')
+            ax.set_title(season_name, color='white')
             ax.set_xlabel('Year', color='white')
-            ax.set_ylabel('Temperature Anomaly (°C)', color='white')
+            ax.set_ylabel(f'Temperature ({unit_symbol})', color='white')
             ax.grid(True, alpha=0.2, color='#3498db')
             ax.legend(facecolor='#34495e', edgecolor='white')
             ax.tick_params(colors='white')
@@ -414,39 +761,87 @@ These decadal changes represent fundamental shifts in our climate system that wi
         ax = self.fig.add_subplot(111)
         ax.set_facecolor('#34495e')
         
+        # Calculate decadal averages and statistics
         self.analysis.df['Decade'] = (self.analysis.df['Year'] // 10) * 10
         decadal_avg = self.analysis.df.groupby('Decade')['annual_temp'].mean()
-        decadal_change = decadal_avg.diff()
+        decadal_std = self.analysis.df.groupby('Decade')['annual_temp'].std()
         
-        # Plot bar chart
-        bars = ax.bar(decadal_change.index, decadal_change.values, 
-                     color='#3498db', edgecolor='#3498db')
+        # Convert temperature if needed
+        unit_symbol = '°F' if self.temp_unit.get() == 'Fahrenheit' else '°C'
+        if self.temp_unit.get() == 'Fahrenheit':
+            decadal_avg = self.celsius_to_fahrenheit(decadal_avg)
+            decadal_std = decadal_std * 9/5
         
-        ax.set_title('Decadal Temperature Changes', color='white', pad=20,
+        # Calculate warming rate
+        z = np.polyfit(decadal_avg.index, decadal_avg.values, 1)
+        p = np.poly1d(z)
+        warming_rate = z[0]  # °C or °F per decade
+        
+        # Plot decadal averages with error bars
+        ax.errorbar(decadal_avg.index, decadal_avg.values, 
+                   yerr=decadal_std.values,
+                   color='#3498db', linewidth=2, marker='o', 
+                   capsize=5, capthick=2, label='Decadal Average')
+        
+        # Add trend line
+        ax.plot(decadal_avg.index, p(decadal_avg.index), 
+                color='#e74c3c', linestyle='--', linewidth=2,
+                label=f'Trend: {warming_rate:.4f}{unit_symbol}/decade')
+        
+        # Add statistical information
+        stats_text = (
+            f"Warming Rate: {warming_rate:.4f}{unit_symbol}/decade\n"
+            f"Total Change: {decadal_avg.iloc[-1] - decadal_avg.iloc[0]:.2f}{unit_symbol}\n"
+            f"Most Recent Decade: {decadal_avg.iloc[-1]:.2f}{unit_symbol}\n"
+            f"First Decade: {decadal_avg.iloc[0]:.2f}{unit_symbol}"
+        )
+        
+        # Add text box with statistics - repositioned to top right with adjusted style
+        props = dict(boxstyle='round,pad=0.5', 
+                    facecolor='#34495e', 
+                    edgecolor='#3498db', 
+                    alpha=0.9)
+        
+        # Position the text box in the top right
+        ax.text(0.98, 0.98, stats_text, 
+                transform=ax.transAxes,
+                verticalalignment='top', 
+                horizontalalignment='right',
+                color='white', 
+                fontsize=10,
+                bbox=props)
+        
+        ax.set_title('Decadal Temperature Analysis', color='white', pad=20,
                     font={'size': 14, 'weight': 'normal'})
         ax.set_xlabel('Decade', color='white')
-        ax.set_ylabel('Temperature Change (°C)', color='white')
+        ax.set_ylabel(f'Temperature ({unit_symbol})', color='white')
         ax.grid(True, alpha=0.2, color='#3498db')
+        ax.legend(facecolor='#34495e', edgecolor='white', 
+                 loc='upper left')
         ax.tick_params(colors='white')
+        
+        # Add value labels with adjusted position
+        for x, y in zip(decadal_avg.index, decadal_avg.values):
+            # Adjust vertical position based on value
+            offset = 0.02 if y >= 0 else -0.02
+            ax.text(x, y + offset, f'{y:.2f}{unit_symbol}', 
+                    ha='center', 
+                    va='bottom' if y >= 0 else 'top',
+                    color='white')
         
         # Style the axis
         for spine in ax.spines.values():
             spine.set_color('#3498db')
         
-        # Add value labels
-        for bar in bars:
-            height = bar.get_height()
-            if not np.isnan(height):
-                ax.text(bar.get_x() + bar.get_width()/2., height,
-                       f'{height:.3f}°C',
-                       ha='center', va='bottom' if height >= 0 else 'top',
-                       color='white')
-        
         # Add hover annotation
         self.add_hover_annotation(ax)
+        
+        # Adjust layout with more padding
+        self.fig.tight_layout(pad=1.5)
     
     def add_hover_annotation(self, ax):
         """Add hover annotation to the plot"""
+        unit_symbol = '°F' if self.temp_unit.get() == 'Fahrenheit' else '°C'
         annot = ax.annotate("", xy=(0,0), xytext=(10,10),
                            textcoords="offset points",
                            bbox=dict(boxstyle="round", fc="#34495e", ec="white", alpha=0.8),
@@ -467,9 +862,9 @@ These decadal changes represent fundamental shifts in our climate system that wi
                     if 0 <= row < 12:
                         month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][row]
-                        text = f'Year: {int(x)}\nMonth: {month}\nTemp: {y:.2f}°C'
+                        text = f'Year: {int(x)}\nMonth: {month}\nTemp: {y:.2f}{unit_symbol}'
                 else:  # Line or bar plots
-                    text = f'Year: {int(x)}\nTemp: {y:.2f}°C'
+                    text = f'Year: {int(x)}\nTemp: {y:.2f}{unit_symbol}'
                 
                 annot.set_text(text)
                 annot.set_visible(True)
@@ -481,71 +876,152 @@ These decadal changes represent fundamental shifts in our climate system that wi
         self.fig.canvas.mpl_connect('motion_notify_event', hover)
     
     def show_statistics(self):
-        """Display statistical summary"""
+        """Display statistical summary with enhanced analysis and impact assessment"""
         self.text_widget.pack(fill=tk.BOTH, expand=True)
         self.text_widget.delete(1.0, tk.END)
         
         # Calculate statistics
         stats = self.analysis.calculate_statistics()
         
-        # Configure text tags with better styling
+        # Calculate additional statistics
+        df = self.analysis.df
+        unit_symbol = '°F' if self.temp_unit.get() == 'Fahrenheit' else '°C'
+        
+        # Calculate variability metrics
+        monthly_std = df[['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']].std()
+        most_variable_month = monthly_std.idxmax()
+        least_variable_month = monthly_std.idxmin()
+        
+        # Calculate extreme events
+        extreme_threshold = df['annual_temp'].mean() + 2 * df['annual_temp'].std()
+        extreme_years = df[df['annual_temp'] > extreme_threshold]['Year'].tolist()
+        
+        # Calculate acceleration of warming
+        early_trend = np.polyfit(df['Year'][:len(df)//2], df['annual_temp'][:len(df)//2], 1)[0]
+        late_trend = np.polyfit(df['Year'][len(df)//2:], df['annual_temp'][len(df)//2:], 1)[0]
+        warming_acceleration = late_trend - early_trend
+        
+        # Configure text styles
         self.text_widget.tag_configure('title', 
-                                    font=('Helvetica', 16, 'normal'),
+                                    font=('Helvetica', 16, 'bold'),
                                     foreground='#ffffff',
                                     spacing1=10,
                                     spacing3=5)
         
         self.text_widget.tag_configure('header', 
-                                    font=('Helvetica', 12, 'normal'),
-                                    foreground='#e0e0e0',
+                                    font=('Helvetica', 12, 'bold'),
+                                    foreground='#e74c3c',  # Red for emphasis
                                     spacing1=5,
                                     spacing3=3)
         
+        self.text_widget.tag_configure('subheader', 
+                                    font=('Helvetica', 11, 'bold'),
+                                    foreground='#3498db',  # Blue for sub-sections
+                                    spacing1=3,
+                                    spacing3=2)
+        
         self.text_widget.tag_configure('value', 
-                                    font=('Consolas', 10),
+                                    font=('Helvetica', 10),
                                     foreground='#bdbdbd',
                                     spacing1=2)
         
-        self.text_widget.tag_configure('divider', 
-                                    font=('Helvetica', 10),
-                                    foreground='#3498db',
-                                    spacing1=5,
-                                    spacing3=5)
+        self.text_widget.tag_configure('impact', 
+                                    font=('Helvetica', 10, 'italic'),
+                                    foreground='#e67e22',  # Orange for impact statements
+                                    spacing1=2)
+        
+        self.text_widget.tag_configure('alert', 
+                                    font=('Helvetica', 10, 'bold'),
+                                    foreground='#e74c3c',  # Red for alerts
+                                    spacing1=2)
         
         # Insert title
-        self.text_widget.insert(tk.END, "Climate Analysis Statistics\n", 'title')
-        self.text_widget.insert(tk.END, "─" * 30 + "\n\n", 'divider')
+        self.text_widget.insert(tk.END, "Climate Change Impact Analysis\n", 'title')
+        self.text_widget.insert(tk.END, "Understanding the Human Impact of Temperature Changes\n\n", 'subheader')
         
-        # Date range section
-        self.text_widget.insert(tk.END, "Date Range\n", 'header')
+        # Key Findings Section
+        self.text_widget.insert(tk.END, "🔍 Key Findings\n", 'header')
+        total_change = stats['extremes']['warmest_temp'] - stats['extremes']['coldest_temp']
+        
+        # Temperature Change Impact
+        self.text_widget.insert(tk.END, "Temperature Change:\n", 'subheader')
         self.text_widget.insert(tk.END, 
-            f"   {stats['date_range']['start']} - {stats['date_range']['end']}\n\n", 'value')
-        
-        # Overall statistics section
-        self.text_widget.insert(tk.END, "Overall Statistics\n", 'header')
-        self.text_widget.insert(tk.END, 
-            f"   Mean Temperature Anomaly: {stats['overall']['mean']:.3f}°C\n", 'value')
+            f"• Total temperature change: {total_change:.2f}{unit_symbol}\n", 'value')
         self.text_widget.insert(tk.END,
-            f"   Standard Deviation: {stats['overall']['std']:.3f}°C\n", 'value')
-        self.text_widget.insert(tk.END,
-            f"   Temperature Trend: {stats['overall']['trend']:.4f}°C/year\n\n", 'value')
+            "→ This change is equivalent to the difference between a comfortable spring day "
+            "and a severe heat warning.\n", 'impact')
         
-        # Extreme values section
-        self.text_widget.insert(tk.END, "Extreme Values\n", 'header')
+        # Acceleration Impact
+        self.text_widget.insert(tk.END, "\nWarming Acceleration:\n", 'subheader')
         self.text_widget.insert(tk.END,
-            f"   Warmest Year: {stats['extremes']['warmest_year']} "
-            f"({stats['extremes']['warmest_temp']:.3f}°C)\n", 'value')
+            f"• Recent warming rate: {late_trend:.4f}{unit_symbol}/year\n"
+            f"• Earlier warming rate: {early_trend:.4f}{unit_symbol}/year\n"
+            f"• Acceleration: {warming_acceleration:.4f}{unit_symbol}/year²\n", 'value')
         self.text_widget.insert(tk.END,
-            f"   Coldest Year: {stats['extremes']['coldest_year']} "
-            f"({stats['extremes']['coldest_temp']:.3f}°C)\n\n", 'value')
+            "→ The rate of warming is increasing, making adaptation more challenging for "
+            "communities and ecosystems.\n", 'impact')
         
-        # Seasonal trends section
-        self.text_widget.insert(tk.END, "Seasonal Trends (°C/year)\n", 'header')
-        for season, trend in stats['seasonal_trends'].items():
-            self.text_widget.insert(tk.END, f"   {season}: {trend:.4f}\n", 'value')
+        # Extreme Events Impact
+        self.text_widget.insert(tk.END, "\n⚠️ Extreme Events:\n", 'header')
+        self.text_widget.insert(tk.END,
+            f"• Number of extreme temperature years: {len(extreme_years)}\n"
+            f"• Most recent extreme years: {', '.join(map(str, sorted(extreme_years)[-3:]))}\n", 'value')
+        if len(extreme_years) > 0:
+            self.text_widget.insert(tk.END,
+                "→ Extreme temperatures increase risks of:\n"
+                "   - Heat-related health issues\n"
+                "   - Strain on power grids\n"
+                "   - Agricultural challenges\n"
+                "   - Water resource stress\n", 'alert')
         
-        # Add final divider
-        self.text_widget.insert(tk.END, "\n" + "─" * 30, 'divider')
+        # Seasonal Vulnerability
+        self.text_widget.insert(tk.END, "\n🌡️ Seasonal Vulnerability:\n", 'header')
+        winter_trend = stats['seasonal_trends']['DJF']
+        summer_trend = stats['seasonal_trends']['JJA']
+        
+        self.text_widget.insert(tk.END,
+            f"• Winter warming rate: {winter_trend:.4f}{unit_symbol}/year\n"
+            f"• Summer warming rate: {summer_trend:.4f}{unit_symbol}/year\n"
+            f"• Most variable month: {most_variable_month}\n", 'value')
+        
+        seasonal_impact = (
+            "→ Changing seasonal patterns affect:\n"
+            "   - Agricultural growing seasons\n"
+            "   - Wildlife migration patterns\n"
+            "   - Winter recreation activities\n"
+            "   - Energy consumption patterns\n"
+        )
+        self.text_widget.insert(tk.END, seasonal_impact, 'impact')
+        
+        # Future Projections
+        self.text_widget.insert(tk.END, "\n🔮 Future Implications:\n", 'header')
+        years_to_threshold = 10
+        projected_change = late_trend * years_to_threshold
+        
+        self.text_widget.insert(tk.END,
+            f"• Projected {years_to_threshold}-year change: {projected_change:.2f}{unit_symbol}\n", 'value')
+        
+        projection_impact = (
+            "→ Without intervention, we can expect:\n"
+            "   - Increased frequency of extreme weather\n"
+            "   - Greater stress on vulnerable populations\n"
+            "   - More challenges for agriculture and food security\n"
+            "   - Higher adaptation costs for communities\n"
+        )
+        self.text_widget.insert(tk.END, projection_impact, 'alert')
+        
+        # Call to Action
+        self.text_widget.insert(tk.END, "\n💡 What Can Be Done:\n", 'header')
+        action_items = (
+            "• Support climate-resilient infrastructure\n"
+            "• Implement early warning systems for extreme weather\n"
+            "• Develop community cooling centers\n"
+            "• Protect vulnerable populations\n"
+            "• Invest in renewable energy\n"
+            "• Enhance urban green spaces\n"
+        )
+        self.text_widget.insert(tk.END, action_items, 'value')
         
         # Make text widget read-only
         self.text_widget.configure(state='disabled')
