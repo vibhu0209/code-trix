@@ -298,6 +298,46 @@ class ClimateAnalysis:
         fig.write_html(filepath)
         print(f"Plot saved to {filepath}")
 
+    def load_sea_ice_data(self, path='data/N_Sea_Ice_Index_Regional_Monthly_Data_G02135_v3.0.xlsx'):
+        """Load and preview the sea ice dataset for integration."""
+        try:
+            df = pd.read_excel(path)
+            print('Sea Ice Data Columns:', df.columns.tolist())
+            print(df.head())
+            return df
+        except Exception as e:
+            print(f"Error loading sea ice data: {e}")
+            return None
+
+    def plot_sea_ice_trends(self, path='data/N_Sea_Ice_Index_Regional_Monthly_Data_G02135_v3.0.xlsx'):
+        """Process and plot annual average sea ice area over time."""
+        df = pd.read_excel(path, header=2)  # Use third row as header
+        df.columns = [str(col).strip() for col in df.columns]
+        months = ['January', 'February', 'March', 'April', 'May', 'June',
+                  'July', 'August', 'September', 'October', 'November', 'December']
+        month_cols = [col for col in df.columns if col in months]
+        if len(month_cols) != 12:
+            print('DEBUG: Columns found:', df.columns.tolist())
+            raise ValueError(f"Could not find all month columns. Found: {month_cols}")
+        keep_cols = ['Year'] + month_cols
+        df = df.rename(columns={df.columns[0]: 'Year'})
+        df = df[keep_cols]
+        df['Year'] = pd.to_numeric(df['Year'], errors='coerce')
+        for m in month_cols:
+            df[m] = pd.to_numeric(df[m], errors='coerce')
+        df = df.dropna(subset=['Year'])
+        df['Annual_Avg_Area'] = df[month_cols].mean(axis=1)
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(df['Year'], df['Annual_Avg_Area'], marker='o', color='#3498db', label='Annual Avg Sea Ice Area')
+        ax.set_title('Annual Average Sea Ice Area (Northern Hemisphere)', fontsize=14)
+        ax.set_xlabel('Year')
+        ax.set_ylabel('Sea Ice Area (sq km)')
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+        plt.tight_layout()
+        plt.show()
+        return df
+
 if __name__ == "__main__":
     # Initialize analysis
     analysis = ClimateAnalysis()
@@ -342,4 +382,7 @@ if __name__ == "__main__":
         f.write("\nTemperature Variability:\n")
         f.write(f"Annual Standard Deviation: {stats['variability']['annual_std']:.4f}°C\n")
         f.write(f"Monthly Standard Deviation: {stats['variability']['monthly_std']:.4f}°C\n")
-        f.write(f"Seasonal Standard Deviation: {stats['variability']['seasonal_std']:.4f}°C\n") 
+        f.write(f"Seasonal Standard Deviation: {stats['variability']['seasonal_std']:.4f}°C\n")
+
+    # Load and preview sea ice data
+    sea_ice_df = analysis.load_sea_ice_data() 

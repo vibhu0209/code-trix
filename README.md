@@ -17,13 +17,14 @@ This project analyzes and visualizes global temperature data from NASA GISS (God
   - Monthly Trends: Heatmap showing monthly temperature patterns
   - Seasonal Analysis: Temperature changes across different seasons
   - Decadal Changes: Temperature variations between decades
+  - Sea Ice Trends: Annual average sea ice area in the Northern Hemisphere
   - Statistics: Comprehensive climate change impact analysis
 
 ### Advanced Visualization Features
 - Interactive plots with hover annotations
 - Temperature unit toggle (Celsius/Fahrenheit)
 - Graph export functionality (PNG, JPEG, PDF)
-- Animated temperature trends
+- Animated temperature and sea ice trends
 - Custom navigation toolbar
 - Detailed explanations for each visualization type
 
@@ -32,6 +33,7 @@ This project analyzes and visualizes global temperature data from NASA GISS (God
 - Seasonal trend analysis
 - Extreme event detection
 - Warming acceleration calculations
+- Sea ice area statistics and trend analysis
 - Impact assessment and future projections
 
 ## Setup Instructions
@@ -51,6 +53,9 @@ pip install -r requirements.txt
    - Place `GLB.Ts+dSST.csv` in the `data/` directory
 
 4. Run the application:
+```bash
+python climate_analysis.py
+```
 ```bash
 python climate_gui.py
 ```
@@ -84,7 +89,12 @@ The script expects the NASA GISS temperature dataset with the following structur
    - Error bars indicating temperature variability
    - Trend line showing long-term changes
 
-5. **Statistics**
+5. **Sea Ice Trends**
+   - Line chart showing annual average sea ice area in the Northern Hemisphere
+   - Animated visualization of sea ice decline
+   - Key statistics: min, max, mean, and trend in sea ice area
+
+6. **Statistics**
    - Comprehensive climate change impact analysis
    - Key findings and real-world implications
    - Future projections and recommendations
@@ -100,6 +110,3 @@ The script expects the NASA GISS temperature dataset with the following structur
 
 ## Contributing
 Feel free to submit issues and enhancement requests!
-
-## License
-This project is licensed under the MIT License - see the LICENSE file for details. 

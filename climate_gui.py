@@ -6,6 +6,35 @@ import numpy as np
 from climate_analysis import ClimateAnalysis
 from matplotlib.animation import FuncAnimation
 import matplotlib as mpl
+import pandas as pd
+
+# --- BOLD COLOR PALETTE ---
+COLORS = {
+    'arctic_blue': '#B0D0D3',
+    'ice_white': '#F7F9F9',
+    'glacier_gray': '#8E9AAF',
+    'midnight_navy': '#3E517A',
+    'deep_teal': '#2A6F75',
+    'coral': '#FF6B6B',
+    'peach': '#FFD93D',
+    'olive_green': '#6B8E23',
+    'deep_ocean': '#355C7D',
+    'dusty_rose': '#D7B9D5',
+    'white': '#FFFFFF',
+    'black': '#000000',
+    'carbon_gray': '#4F4F4F',
+    'aqua_blue': '#00BFFF',
+    'plant_green': '#32CD32',
+}
+
+try:
+    MAIN_FONT = ('Poppins', 14)
+    HEADER_FONT = ('Poppins', 38, 'bold')
+    SUBHEADER_FONT = ('Poppins', 20, 'bold')
+except:
+    MAIN_FONT = ('Helvetica Neue', 14)
+    HEADER_FONT = ('Helvetica Neue', 38, 'bold')
+    SUBHEADER_FONT = ('Helvetica Neue', 20, 'bold')
 
 class CustomToolbar(NavigationToolbar2Tk):
     def __init__(self, canvas, parent):
@@ -17,6 +46,10 @@ class CustomToolbar(NavigationToolbar2Tk):
                                activebackground='#3498db', activeforeground='white')
 
 class RoundedButton(tk.Canvas):
+    default_bg = '#2c3e50'
+    default_fg = 'white'
+    default_hover = '#3498db'
+
     def __init__(self, parent, text, command=None, width=120, height=35, corner_radius=10, bg='#34495e', fg='white', hover_color='#3498db', **kwargs):
         super().__init__(parent, width=width, height=height, highlightthickness=0, bg='#2c3e50', **kwargs)
         self.command = command
@@ -61,172 +94,264 @@ class RoundedButton(tk.Canvas):
             self.command()
 
 class InfoButton(RoundedButton):
+    default_bg = '#34495e'
+    default_fg = 'white'
+    default_hover = '#3498db'
+
     def __init__(self, parent, text="ℹ️", **kwargs):
         super().__init__(parent, text=text, width=30, height=30, corner_radius=15, bg='#34495e', hover_color='#3498db', **kwargs)
 
 class ClimateGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Climate Analysis Viewer")
-        self.root.geometry("1200x800")
-        
-        self.explanations = {
-            "temperature": """
-Temperature Trends Analysis 📈
-
-This graph shows the global temperature anomalies over time:
-• Blue line: Annual temperature variations
-• Red dashed line: Long-term temperature trend
-• Green line: 10-year moving average for smoother trend visualization
-
-Why This Matters:
-The accelerating rise in global temperatures shown here isn't just a statistical trend – it's a clear warning signal. The steepening curve indicates we're approaching critical tipping points in the Earth's climate system. Each fraction of a degree increase brings us closer to irreversible changes in weather patterns, ecosystem stability, and food security.
-
-Key Findings:
-• The rate of warming has increased significantly in recent decades, showing climate change is accelerating
-• Temperature variations are becoming more extreme, with new records being set more frequently
-• The 10-year average shows a clear upward trend that exceeds natural climate variability
-
-Real-World Impact:
-These temperature changes directly affect everything from crop yields to water availability. The trends we see here are already translating into more frequent extreme weather events, rising sea levels, and threats to food security. Understanding these patterns is crucial for developing effective climate adaptation and mitigation strategies.
-""",
-            "monthly": """
-Monthly Temperature Patterns 🌡️
-
-This heatmap visualizes temperature changes across months and years:
-• Red colors: Warmer temperatures
-• Blue colors: Cooler temperatures
-• Vertical patterns: Seasonal changes
-• Horizontal patterns: Long-term trends
-
-Why This Matters:
-Monthly temperature patterns reveal how climate change is disrupting natural seasonal rhythms. These disruptions have profound implications for agriculture, ecosystems, and human activities. The changing patterns we observe here are already affecting growing seasons, wildlife migration, and energy consumption patterns worldwide.
-
-Key Findings:
-• Winter months are warming faster than summer months, disrupting natural cycles
-• Shoulder seasons (spring/fall) show increasing instability
-• Heat waves are becoming more intense and occurring earlier in the year
-
-Real-World Impact:
-These shifting seasonal patterns affect everything from crop planting times to energy grid management. For farmers, changing frost dates and growing seasons require adaptive strategies. For cities, altered temperature patterns mean rethinking urban planning and emergency preparedness.
-""",
-            "seasonal": """
-Seasonal Temperature Analysis 🌍
-
-These four plots show temperature changes for each season:
-• DJF: Winter (December, January, February)
-• MAM: Spring (March, April, May)
-• JJA: Summer (June, July, August)
-• SON: Fall (September, October, November)
-
-Why This Matters:
-Seasonal temperature changes are not just about comfort – they're reshaping ecosystems and agricultural systems that have evolved over thousands of years. The uneven warming across seasons is disrupting delicate natural balances, from pollination cycles to pest control, threatening biodiversity and food production.
-
-Key Findings:
-• Winters are warming faster than other seasons, affecting snow cover and water resources
-• Spring temperatures are becoming more erratic, impacting plant flowering and animal migration
-• Summer heat extremes are intensifying, creating new challenges for public health
-
-Real-World Impact:
-These seasonal shifts have cascading effects through our natural and human systems. Earlier springs affect pollination timing, warmer winters fail to kill off pest populations, and hotter summers strain power grids and public health systems. Understanding these patterns is crucial for climate adaptation planning.
-""",
-            "decadal": """
-Decadal Temperature Changes 📊
-
-This bar chart shows temperature changes between decades:
-• Blue bars: Temperature difference between consecutive decades
-• Positive values: Warming trends
-• Negative values: Cooling trends
-
-Why This Matters:
-The decadal view reveals the long-term acceleration of global warming, cutting through year-to-year noise to show the undeniable trend. This perspective is crucial because it demonstrates how each decade is systematically warmer than the last, creating a new normal that Earth's systems must adapt to at an unprecedented pace.
-
-Key Findings:
-• Recent decades show larger temperature jumps than earlier periods
-• The rate of warming between decades is accelerating
-• Natural cooling periods are becoming less frequent and less intense
-
-Real-World Impact:
-These decadal changes represent fundamental shifts in our climate system that will persist for generations. The accelerating warming trend means we have less time to adapt our infrastructure, agriculture, and economies. This data underscores the urgency of immediate action to reduce emissions and build resilience into our systems.
-"""
+        self.colors = {
+            'background': '#232946',  # deep navy
+            'panel': '#121629',      # even deeper navy
+            'accent': '#eebbc3',     # soft coral accent
+            'button': '#393e46',     # dark gray for buttons
+            'button_active': '#27ae60',  # professional green for active/hover
+            'button_fg': '#f4f4f4',
+            'button_border': '#27ae60',  # green border for focus
+            'header': '#232946',
+            'header_fg': '#eebbc3',
+            'plot_bg': '#232946',
+            'plot_grid': '#b8c1ec',
+            'plot_line1': '#27ae60',  # green for main line
+            'plot_line2': '#00BFFF',
+            'plot_line3': '#32CD32',
+            'plot_line4': '#FFD93D',
+            'legend_bg': '#232946',
+            'legend_fg': '#f4f4f4',
+            'text': '#F7F9F9',
+            'subtle': '#b8c1ec',
+            'pro_green': '#27ae60',  # extra for highlights
         }
-        
+        self.root.title("🌎 Planet at Risk: Climate Dashboard 🌅")
+        self.root.geometry("1280x900")
+        # --- Main background gradient effect ---
+        self.root.configure(bg=self.colors['background'])
         self.style = ttk.Style()
-        self.style.configure('Main.TFrame', background='#2c3e50')
-        self.style.configure('Button.TFrame', background='#2c3e50')
-        self.style.configure('Plot.TFrame', background='#2c3e50')
-        
-        self.analysis = ClimateAnalysis()
+        self.style.theme_use('clam')
+        self.style.configure('Main.TFrame', background=self.colors['background'])
+        self.style.configure('Button.TFrame', background=self.colors['panel'])
+        self.style.configure('Plot.TFrame', background=self.colors['panel'])
+        # --- HEADER ---
+        self.header_frame = tk.Frame(self.root, bg=self.colors['header'], height=70, bd=0, relief='flat')
+        self.header_frame.pack(fill=tk.X, side=tk.TOP)
+        self.header_label = tk.Label(
+            self.header_frame,
+            text="Planet at Risk: Climate Dashboard",
+            font=("Segoe UI", 28, "bold"),
+            fg=self.colors['header_fg'],
+            bg=self.colors['header'],
+            pady=18,
+            anchor='center',
+            justify='center'
+        )
+        self.header_label.pack(fill=tk.X)
+        # --- Main frame with drop shadow ---
+        self.main_frame = tk.Frame(self.root, bg=self.colors['background'], bd=0)
+        self.main_frame.pack(fill=tk.BOTH, expand=True, padx=12, pady=8)
+        # --- Control panel ---
         self.temp_unit = tk.StringVar(value='Celsius')
-        
-        self.main_frame = ttk.Frame(self.root, padding="20", style='Main.TFrame')
-        self.main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        title_label = tk.Label(self.main_frame, 
-                             text="Climate Analysis Dashboard",
-                             font=('Helvetica', 24, 'normal'),
-                             fg='white',
-                             bg='#2c3e50',
-                             pady=20)
-        title_label.pack(fill=tk.X)
-        
         self.create_control_panel()
-        
-        self.button_frame = ttk.Frame(self.main_frame, style='Button.TFrame')
-        self.button_frame.pack(fill=tk.X, pady=10)
-        
+        # --- BUTTON BAR ---
+        self.button_frame = tk.Frame(self.main_frame, bg=self.colors['panel'], bd=0)
+        self.button_frame.pack(fill=tk.X, pady=8)
         buttons = [
             ("Temperature Trends", "temperature"),
             ("Monthly Trends", "monthly"),
             ("Seasonal Analysis", "seasonal"),
             ("Decadal Changes", "decadal"),
+            ("Sea Ice Trends", "sea_ice"),
             ("Statistics", "stats")
         ]
-        
+        self.button_widgets = {}
         for text, cmd in buttons:
-            btn_container = ttk.Frame(self.button_frame, style='Button.TFrame')
-            btn_container.pack(side=tk.LEFT, padx=5)
-            
-            btn = RoundedButton(btn_container, text=text, 
+            btn = tk.Button(
+                self.button_frame, text=text,
                               command=lambda c=cmd: self.show_plot(c),
-                              width=150)
-            btn.pack(side=tk.LEFT)
-            
+                font=("Segoe UI", 13, "bold"),
+                bg=self.colors['button'], fg=self.colors['button_fg'],
+                activebackground=self.colors['button_active'],
+                activeforeground=self.colors['background'],
+                bd=0, relief='flat', padx=16, pady=6,
+                highlightthickness=2, highlightbackground=self.colors['button_border'],
+                cursor='hand2'
+            )
+            btn.pack(side=tk.LEFT, padx=6, pady=4)
+            self.button_widgets[cmd] = btn
             if cmd != "stats":
-                info_btn = InfoButton(btn_container,
-                                    command=lambda c=cmd: self.show_explanation(c))
-                info_btn.pack(side=tk.LEFT, padx=5)
-        
-        self.plot_frame = ttk.Frame(self.main_frame, style='Plot.TFrame')
+                info_btn = tk.Button(
+                    self.button_frame, text="i", font=("Segoe UI", 11, 'bold'),
+                    command=lambda c=cmd: self.show_explanation(c),
+                    bg=self.colors['panel'], fg=self.colors['accent'],
+                    activebackground=self.colors['accent'], activeforeground=self.colors['panel'],
+                    bd=0, relief='flat', width=2, height=1, cursor='hand2',
+                    highlightthickness=0
+                )
+                info_btn.pack(side=tk.LEFT, padx=(0, 10))
+        # --- PLOT FRAME ---
+        self.plot_frame = tk.Frame(self.main_frame, bg=self.colors['panel'], bd=2, relief='ridge')
         self.plot_frame.pack(fill=tk.BOTH, expand=True, pady=10)
-        
         plt.style.use('dark_background')
-        mpl.rcParams['axes.facecolor'] = '#2c3e50'
-        mpl.rcParams['figure.facecolor'] = '#2c3e50'
-        mpl.rcParams['savefig.facecolor'] = '#2c3e50'
-        
-        self.fig = plt.figure(figsize=(10, 6), facecolor='#2c3e50')
+        mpl.rcParams['axes.facecolor'] = self.colors['plot_bg']
+        mpl.rcParams['figure.facecolor'] = self.colors['panel']
+        mpl.rcParams['savefig.facecolor'] = self.colors['panel']
+        mpl.rcParams['axes.edgecolor'] = self.colors['accent']
+        mpl.rcParams['xtick.color'] = self.colors['subtle']
+        mpl.rcParams['ytick.color'] = self.colors['subtle']
+        mpl.rcParams['text.color'] = self.colors['text']
+        mpl.rcParams['axes.labelcolor'] = self.colors['accent']
+        mpl.rcParams['axes.titlecolor'] = self.colors['accent']
+        self.fig = plt.figure(figsize=(11, 7), facecolor=self.colors['panel'])
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        
-        self.toolbar = CustomToolbar(self.canvas, self.plot_frame)
+        # --- RESTORE MATPLOTLIB TOOLBAR ---
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self.plot_frame)
+        self.toolbar.config(bg=self.colors['panel'])
         self.toolbar.update()
-        
+        # --- TEXT WIDGET ---
         self.text_widget = scrolledtext.ScrolledText(
             self.plot_frame,
             wrap=tk.WORD,
             height=20,
-            bg='#34495e',
-            fg='white',
-            font=('Helvetica', 10),
-            insertbackground='white',
+            bg=self.colors['panel'],
+            fg=self.colors['text'],
+            font=("Segoe UI", 12),
+            insertbackground=self.colors['text'],
             relief='flat',
             bd=0,
             highlightthickness=0
         )
-        
-        self.root.configure(bg='#2c3e50')
+        self.analysis = ClimateAnalysis()
         self.show_plot("temperature")
+        
+        # Update button colors in RoundedButton and InfoButton
+        RoundedButton.default_bg = self.colors['button']
+        RoundedButton.default_fg = self.colors['button_fg']
+        RoundedButton.default_hover = self.colors['button_active']
+        InfoButton.default_bg = self.colors['button']
+        InfoButton.default_fg = self.colors['button_fg']
+        InfoButton.default_hover = self.colors['button_active']
+    
+        # Add detailed, long-form explanations for info buttons (as long and narrative as possible)
+        self.explanations = {
+            "temperature": (
+                "Temperature Trends Analysis: The Pulse of a Warming Planet\n\n"
+                "This graph is more than a line on a chart—it's the heartbeat of our changing world. The blue line traces annual temperature variations, the red dashed line reveals the relentless march of the long-term trend, and the green line smooths out the noise to show the underlying direction.\n\n"
+                "Why This Matters:\n"
+                "Since the dawn of the industrial era, human activity has released vast amounts of greenhouse gases, trapping heat in the atmosphere. The result? A planet that is warming at a rate unprecedented in recorded history. This graph is a visual record of that transformation.\n\n"
+                "The Science Behind the Curve:\n"
+                "• Each data point represents a year of global temperature anomaly—how much warmer or cooler it was compared to a 20th-century baseline.\n"
+                "• The red trend line is calculated using linear regression, showing the average rate of change over time.\n"
+                "• The green moving average helps us see past short-term fluctuations caused by volcanic eruptions, El Niño events, or solar cycles.\n\n"
+                "Key Findings:\n"
+                "• The last decade was the hottest on record, with 8 of the 10 warmest years occurring since 2010.\n"
+                "• The rate of warming has doubled since the 1970s, now exceeding 0.2°C per decade.\n"
+                "• Temperature extremes are becoming more frequent, with new records set almost every year.\n"
+                "• The 10-year moving average shows a persistent upward trend, far beyond natural variability.\n"
+                "• The curve is steepening—a sign that we are approaching critical climate tipping points.\n\n"
+                "Real-World Impact:\n"
+                "This isn't just about numbers. Rising temperatures are melting glaciers, raising sea levels, and fueling more intense heatwaves, droughts, and wildfires. Crop yields are threatened, water supplies are strained, and the risk of deadly heat stress is rising for millions.\n\n"
+                "Case Study: The 2023 European Heatwave\n"
+                "In 2023, Europe experienced its hottest summer ever recorded. Crops withered, rivers ran dry, and power grids were pushed to the brink. This is the new normal unless we act.\n\n"
+                "Looking Forward:\n"
+                "Every fraction of a degree matters. Limiting warming to 1.5°C could prevent the worst impacts, but we're already on track to exceed that threshold within the next two decades. The choices we make now—cutting emissions, investing in clean energy, and building resilience—will shape the future of life on Earth."
+            ),
+            "monthly": (
+                "Monthly Temperature Patterns: The Rhythm of a Changing Year\n\n"
+                "This heatmap is a tapestry of color, revealing how the familiar rhythm of the seasons is being rewritten by climate change.\n\n"
+                "What You See:\n"
+                "• Each row is a month, each column a year.\n"
+                "• Red shades signal months that were warmer than average; blue shades show cooler months.\n"
+                "• Vertical stripes reveal seasonal cycles; horizontal bands show long-term trends.\n\n"
+                "Why This Matters:\n"
+                "The natural calendar that has guided agriculture, migration, and human activity for millennia is shifting. Winters are shrinking, springs are arriving earlier, and heat waves are striking sooner and with greater intensity.\n\n"
+                "Key Insights:\n"
+                "• Winter months (December–February) are warming faster than summer months, disrupting snowpack, water supplies, and natural cycles.\n"
+                "• Shoulder seasons—spring and fall—are showing increased instability, with wild swings between warm and cold.\n"
+                "• Heat waves are not only more intense but are occurring earlier in the year, catching communities off guard.\n"
+                "• The pattern of warming is not uniform: some regions experience cold snaps even as the global average rises, a hallmark of climate disruption.\n\n"
+                "Real-World Impact:\n"
+                "Farmers are struggling to adapt to unpredictable frost dates and growing seasons. Wildlife migration and breeding are thrown out of sync. Cities face new challenges in managing energy demand as air conditioning use spikes earlier and longer each year.\n\n"
+                "Case Study: Early Cherry Blossoms in Japan\n"
+                "In recent years, cherry blossoms in Kyoto have peaked weeks earlier than historical averages—a vivid sign of how climate change is altering the natural world.\n\n"
+                "What This Means for the Future:\n"
+                "Adapting to these changes will require new strategies for agriculture, urban planning, and disaster preparedness. The heatmap is a warning—and a guide—for what lies ahead."
+            ),
+            "seasonal": (
+                "Seasonal Temperature Analysis: Four Seasons, One Warming World\n\n"
+                "This set of plots breaks down temperature changes by season, revealing the uneven pace of warming throughout the year.\n\n"
+                "What the Graph Shows:\n"
+                "• DJF: Winter (December–February)\n"
+                "• MAM: Spring (March–May)\n"
+                "• JJA: Summer (June–August)\n"
+                "• SON: Fall (September–November)\n\n"
+                "Why This Matters:\n"
+                "Seasonal shifts are more than a curiosity—they are a fundamental reshaping of the world we know. Winters are losing their chill, springs are less predictable, and summers are pushing the limits of human and ecological endurance.\n\n"
+                "Key Findings:\n"
+                "• Winters are warming at nearly twice the rate of summers, reducing snowpack and threatening water supplies for millions.\n"
+                "• Spring temperatures are increasingly erratic, disrupting pollination, plant growth, and animal migration.\n"
+                "• Summer heat extremes are intensifying, leading to more frequent and severe heatwaves, wildfires, and health emergencies.\n"
+                "• Autumns are lingering longer, delaying the onset of winter and altering the timing of ecological events.\n"
+                "• The uneven pace of warming is a sign of deep disruption in the climate system.\n\n"
+                "Real-World Impact:\n"
+                "Earlier springs mean earlier allergies and mismatched timing for crops and pollinators. Hotter summers strain power grids and public health. Shorter, milder winters fail to control pests and diseases.\n\n"
+                "Case Study: The Disappearing Snowpack in the Western US\n"
+                "In the western United States, shrinking winter snowpack is reducing water availability for cities and farms, increasing wildfire risk, and threatening entire ecosystems.\n\n"
+                "What's at Stake:\n"
+                "Understanding seasonal trends is essential for planning everything from agriculture to disaster response. The four seasons are changing—our strategies must change with them."
+            ),
+            "decadal": (
+                "Decadal Temperature Changes: The Long View\n\n"
+                "This bar chart zooms out to reveal the big picture: how each decade stacks up against the last.\n\n"
+                "What the Graph Shows:\n"
+                "• Blue bars: Temperature difference between consecutive decades\n"
+                "• Positive values: Warming trends\n"
+                "• Negative values: Cooling trends (now rare)\n\n"
+                "Why This Matters:\n"
+                "Decadal analysis cuts through the noise of year-to-year variability, exposing the relentless upward march of global temperatures. Each new decade sets a higher baseline, making adaptation more urgent.\n\n"
+                "Key Insights:\n"
+                "• The last four decades have each been successively warmer than any previous decade on record.\n"
+                "• The rate of warming between decades is accelerating, with the 2010s and 2020s showing the largest jumps.\n"
+                "• Natural cooling periods, once common, are now rare and less intense.\n"
+                "• The decadal trend line is a stark warning: the climate system is shifting to a new, hotter normal.\n\n"
+                "Real-World Impact:\n"
+                "These changes are not abstract. They affect food security, water resources, and the stability of societies.\n\n"
+                "Case Study: The Disappearing Arctic Ice Decade by Decade\n"
+                "Satellite data show that each decade since the 1980s has seen less Arctic sea ice than the last, with profound consequences for global weather and ocean currents.\n\n"
+                "What the Future Holds:\n"
+                "If current trends continue, future decades will bring even greater challenges. Decadal data is a call to action for long-term planning and bold climate policy."
+            ),
+            "sea_ice": (
+                "Sea Ice Trends: The Arctic's Alarming Retreat\n\n"
+                "This graph is a window into the frozen heart of our planet. It tracks the annual average sea ice area in the Northern Hemisphere—a vital sign of planetary health.\n\n"
+                "Why Sea Ice Matters:\n"
+                "Sea ice is a powerful regulator of Earth's climate. Its bright surface reflects sunlight, keeping the Arctic cool and moderating global temperatures (the albedo effect). As sea ice vanishes, darker ocean water absorbs more heat, creating a feedback loop that accelerates warming.\n\n"
+                "But sea ice is more than a climate thermostat. It's the foundation of polar ecosystems, supporting everything from plankton to polar bears. It shapes weather patterns across the Northern Hemisphere, influences ocean currents, and even affects rainfall thousands of miles away.\n\n"
+                "Key Findings:\n"
+                "• The Arctic has lost over 40% of its summer sea ice extent since satellite records began in 1979.\n"
+                "• The minimum annual average sea ice area has dropped to record lows, with the last decade seeing the lowest extents ever measured.\n"
+                "• The rate of decline is accelerating: the Arctic is warming nearly four times faster than the global average.\n"
+                "• Multi-year ice (thicker, older ice) is disappearing, replaced by thin, seasonal ice that melts more easily.\n"
+                "• Unusual events—like mid-winter melt episodes and record-low refreezing—are becoming more common.\n"
+                "• Decadal averages show a relentless downward trend, with each decade losing more ice than the last.\n"
+                "• Record low years are clustered in the 21st century, a sign of rapid change.\n"
+                "• The loss of sea ice is not just a symptom but a driver of further climate disruption.\n\n"
+                "The Science and the Stakes:\n"
+                "• Sea ice loss amplifies global warming, disrupts ocean circulation, and can trigger extreme weather far from the poles.\n"
+                "• Melting sea ice releases methane from the Arctic seabed, a potent greenhouse gas that could accelerate warming.\n"
+                "• Indigenous communities who rely on sea ice for travel, hunting, and culture face existential threats.\n"
+                "• The loss of habitat endangers iconic species and reduces the planet's ability to reflect solar energy.\n\n"
+                "Case Study: The 2012 Arctic Sea Ice Collapse\n"
+                "In September 2012, Arctic sea ice reached its lowest extent ever recorded—less than half the average of the 1980s. Scientists warn that ice-free Arctic summers could occur within decades, with unknown consequences for global climate stability.\n\n"
+                "What the Future Holds:\n"
+                "If current trends continue, the Arctic could become seasonally ice-free by mid-century. This would reshape weather, ocean currents, and ecosystems worldwide.\n\n"
+                "A Call to Action:\n"
+                "Protecting sea ice means protecting the planet. Rapid emissions cuts, investment in renewable energy, and support for Arctic communities are essential to slow the retreat and safeguard our shared future."
+            )
+        }
     
     def create_control_panel(self):
         control_frame = ttk.Frame(self.main_frame, style='Button.TFrame')
@@ -260,6 +385,8 @@ These decadal changes represent fundamental shifts in our climate system that wi
                                   command=self.animate_temperature,
                                   width=180, height=40)
         animate_btn.pack(side=tk.RIGHT, padx=10)
+        
+        self.animate_sea_ice_btn = None
     
     def update_temperature_unit(self):
         current_plot = self.current_plot if hasattr(self, 'current_plot') else "temperature"
@@ -298,6 +425,8 @@ These decadal changes represent fundamental shifts in our climate system that wi
             self.animate_seasonal_analysis()
         elif self.current_plot == "decadal":
             self.animate_decadal_changes()
+        elif self.current_plot == "sea_ice":
+            self.animate_sea_ice_trends()
             
         reset_btn = RoundedButton(self.main_frame, text="Reset View",
                                 command=lambda: self.show_plot(self.current_plot))
@@ -306,7 +435,7 @@ These decadal changes represent fundamental shifts in our climate system that wi
         
     def animate_temperature_trends(self):
         ax = self.fig.add_subplot(111)
-        ax.set_facecolor('#34495e')
+        ax.set_facecolor(self.colors['plot_bg'])
         
         years = self.analysis.df['Year'].values
         temps = self.analysis.df['annual_temp'].values
@@ -316,16 +445,16 @@ These decadal changes represent fundamental shifts in our climate system that wi
         
         ax.set_xlim(years.min(), years.max())
         ax.set_ylim(temps.min() - 0.1, temps.max() + 0.1)
-        line, = ax.plot([], [], color='#3498db', linewidth=2)
+        line, = ax.plot([], [], color=self.colors['plot_line1'], linewidth=2)
         
-        ax.set_title('Temperature Change Animation', color='white')
-        ax.set_xlabel('Year', color='white')
-        ax.set_ylabel(f'Temperature (°{self.temp_unit.get()[0]})', color='white')
-        ax.grid(True, alpha=0.2)
-        ax.tick_params(colors='white')
+        ax.set_title('Temperature Change Animation', color=self.colors['accent'])
+        ax.set_xlabel('Year', color=self.colors['text'])
+        ax.set_ylabel(f'Temperature (°{self.temp_unit.get()[0]})', color=self.colors['text'])
+        ax.grid(True, alpha=0.2, color=self.colors['plot_grid'])
+        ax.tick_params(colors=self.colors['text'])
         
         for spine in ax.spines.values():
-            spine.set_color('#3498db')
+            spine.set_color(self.colors['plot_line2'])
         
         def animate(frame):
             if frame > 0:
@@ -334,7 +463,7 @@ These decadal changes represent fundamental shifts in our climate system that wi
         
         self.anim = FuncAnimation(
             self.fig, animate, frames=len(years) + 1,
-            interval=50, blit=True, repeat=False
+            interval=50, blit=False, repeat=False
         )
         self.canvas.draw()
         
@@ -347,15 +476,20 @@ These decadal changes represent fundamental shifts in our climate system that wi
         }
         years = self.analysis.df['Year'].values
         
-        self.fig.suptitle('Seasonal Temperature Patterns', color='white', 
-                         y=0.95, font={'size': 14, 'weight': 'normal'})
+        self.fig.suptitle('Seasonal Temperature Patterns', color=self.colors['accent'], 
+                         y=0.95, font={'size': 14, 'weight': 'bold'})
         
-        colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f']
+        colors = [
+            '#FF6B6B',  # Winter (DJF) - red
+            self.colors['pro_green'],  # Spring (MAM) - professional green
+            self.colors['plot_line2'],  # Summer (JJA) - blue
+            self.colors['plot_line4']   # Fall (SON) - gold/yellow
+        ]
         lines = []
         
         for i, ((season_code, season_name), color) in enumerate(zip(seasons.items(), colors), 1):
             ax = self.fig.add_subplot(2, 2, i)
-            ax.set_facecolor('#34495e')
+            ax.set_facecolor(self.colors['plot_bg'])
             temps = self.analysis.df[season_code].values
             
             if self.temp_unit.get() == 'Fahrenheit':
@@ -366,14 +500,14 @@ These decadal changes represent fundamental shifts in our climate system that wi
             line, = ax.plot([], [], color=color, linewidth=2)
             lines.append(line)
             
-            ax.set_title(season_name, color='white')
-            ax.set_xlabel('Year', color='white')
-            ax.set_ylabel(f'Temperature (°{self.temp_unit.get()[0]})', color='white')
-            ax.grid(True, alpha=0.2)
-            ax.tick_params(colors='white')
+            ax.set_title(season_name, color=self.colors['accent'])
+            ax.set_xlabel('Year', color=self.colors['text'])
+            ax.set_ylabel(f'Temperature (°{self.temp_unit.get()[0]})', color=self.colors['text'])
+            ax.grid(True, alpha=0.2, color=self.colors['plot_grid'])
+            ax.tick_params(colors=self.colors['text'])
             
             for spine in ax.spines.values():
-                spine.set_color('#3498db')
+                spine.set_color(self.colors['plot_line2'])
         
         def animate(frame):
             if frame > 0:
@@ -386,13 +520,13 @@ These decadal changes represent fundamental shifts in our climate system that wi
         
         self.anim = FuncAnimation(
             self.fig, animate, frames=len(years) + 1,
-            interval=50, blit=True, repeat=False
+            interval=50, blit=False, repeat=False
         )
         self.canvas.draw()
         
     def animate_monthly_trends(self):
         ax = self.fig.add_subplot(111)
-        ax.set_facecolor('#34495e')
+        ax.set_facecolor(self.colors['plot_bg'])
         
         months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -403,39 +537,33 @@ These decadal changes represent fundamental shifts in our climate system that wi
             
         years = self.analysis.df['Year'].values
         
-        ax.set_title('Monthly Temperature Patterns', color='white')
-        ax.set_xlabel('Year', color='white')
-        ax.set_ylabel('Month', color='white')
+        ax.set_title('Monthly Temperature Patterns', color=self.colors['accent'], pad=20,
+                    font={'size': 14, 'weight': 'bold'})
+        ax.set_xlabel('Year', color=self.colors['text'])
+        ax.set_ylabel('Month', color=self.colors['text'])
         ax.set_yticks(range(12))
-        ax.set_yticklabels(months, color='white')
+        ax.set_yticklabels(months, color=self.colors['text'])
+        ax.tick_params(colors=self.colors['text'])
         
-        def animate(frame):
-            if frame > 0:
-                ax.clear()
-                ax.set_facecolor('#34495e')
-                ax.set_title('Monthly Temperature Patterns', color='white')
-                ax.set_xlabel('Year', color='white')
-                ax.set_ylabel('Month', color='white')
-                ax.set_yticks(range(12))
-                ax.set_yticklabels(months, color='white')
-                ax.tick_params(colors='white')
-                for spine in ax.spines.values():
-                    spine.set_color('#3498db')
-                
-                im = ax.imshow(data[:frame].T, aspect='auto', cmap='RdYlBu_r',
-                             extent=[years[0], years[frame-1] if frame > 1 else years[0], -0.5, 11.5])
-                return [im]
-            return []
+        im = ax.imshow(data.T, aspect='auto', cmap='coolwarm',
+                      extent=[years[0], years[-1], -0.5, 11.5])
         
-        self.anim = FuncAnimation(
-            self.fig, animate, frames=len(years) + 1,
-            interval=50, blit=True, repeat=False
-        )
-        self.canvas.draw()
+        colorbar = self.fig.colorbar(im, ax=ax)
+        colorbar.set_label('Temperature Anomaly (°C)', color=self.colors['accent'], 
+                          fontsize=10, labelpad=10)
+        colorbar.ax.yaxis.set_tick_params(color=self.colors['text'])
+        plt.setp(colorbar.ax.get_yticklabels(), color=self.colors['text'])
+        
+        ax.grid(True, alpha=0.2, color=self.colors['plot_grid'])
+        
+        for spine in ax.spines.values():
+            spine.set_color(self.colors['plot_line2'])
+        
+        self.add_hover_annotation(ax)
         
     def animate_decadal_changes(self):
         ax = self.fig.add_subplot(111)
-        ax.set_facecolor('#34495e')
+        ax.set_facecolor(self.colors['plot_bg'])
         
         self.analysis.df['Decade'] = (self.analysis.df['Year'] // 10) * 10
         decadal_avg = self.analysis.df.groupby('Decade')['annual_temp'].mean()
@@ -456,7 +584,7 @@ These decadal changes represent fundamental shifts in our climate system that wi
         
         # Plot the data points with error bars
         line = ax.errorbar(decades, decadal_avg, yerr=decadal_std,
-                          color='#3498db', capsize=5, capthick=2,
+                          color=self.colors['plot_line1'], capsize=5, capthick=2,
                           marker='o', linewidth=2, label='Decadal Average')
         
         # Calculate and plot trend line
@@ -464,7 +592,7 @@ These decadal changes represent fundamental shifts in our climate system that wi
             z = np.polyfit(decades, decadal_avg, 1)
             p = np.poly1d(z)
             trend_line, = ax.plot(decades, p(decades), 
-                                color='#e74c3c', linestyle='--', 
+                                color=self.colors['plot_line2'], linestyle='--', 
                                 linewidth=2, label='Trend')
             
             warming_rate = z[0]
@@ -480,28 +608,28 @@ These decadal changes represent fundamental shifts in our climate system that wi
                               transform=ax.transAxes,
                               verticalalignment='top', 
                               horizontalalignment='right',
-                              color='white', fontsize=10,
+                              color=self.colors['text'], fontsize=10,
                               bbox=dict(boxstyle='round,pad=0.5', 
-                                      facecolor='#34495e', 
-                                      edgecolor='#3498db', 
+                                      facecolor=self.colors['panel'], 
+                                      edgecolor=self.colors['plot_line2'], 
                                       alpha=0.9))
         
         # Add value labels
         for x, y in zip(decades, decadal_avg):
             ax.text(x, y + 0.02, f'{y:.2f}{unit_symbol}',
-                   ha='center', va='bottom', color='white')
+                   ha='center', va='bottom', color=self.colors['text'])
         
-        ax.set_title('Decadal Temperature Changes', color='white', pad=20,
-                    font={'size': 14, 'weight': 'normal'})
-        ax.set_xlabel('Decade', color='white')
-        ax.set_ylabel(f'Temperature ({unit_symbol})', color='white')
-        ax.grid(True, alpha=0.2)
-        ax.tick_params(colors='white')
+        ax.set_title('Decadal Temperature Changes', color=self.colors['accent'], pad=20,
+                    font={'size': 14, 'weight': 'bold'})
+        ax.set_xlabel('Decade', color=self.colors['text'])
+        ax.set_ylabel(f'Temperature ({unit_symbol})', color=self.colors['text'])
+        ax.grid(True, alpha=0.2, color=self.colors['plot_grid'])
+        ax.tick_params(colors=self.colors['text'])
         
         for spine in ax.spines.values():
-            spine.set_color('#3498db')
+            spine.set_color(self.colors['plot_line2'])
             
-        ax.legend(facecolor='#34495e', edgecolor='white', loc='upper left')
+        ax.legend(facecolor=self.colors['panel'], edgecolor=self.colors['plot_line2'], loc='upper left')
         self.canvas.draw()
     
     def celsius_to_fahrenheit(self, celsius):
@@ -527,12 +655,17 @@ These decadal changes represent fundamental shifts in our climate system that wi
                 self.canvas.get_tk_widget().pack_forget()
                 self.toolbar.pack_forget()
                 self.show_statistics()
+            elif plot_type == "sea_ice":
+                self.text_widget.pack_forget()
+                self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+                self.toolbar.pack(side=tk.BOTTOM, fill=tk.X)
+                self.fig.clear()
+                self.plot_sea_ice_trends()
             else:
                 self.text_widget.pack_forget()
                 self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
                 self.toolbar.pack(side=tk.BOTTOM, fill=tk.X)
                 self.fig.clear()
-                
                 if plot_type == "temperature":
                     self.plot_temperature_trends()
                 elif plot_type == "monthly":
@@ -541,7 +674,6 @@ These decadal changes represent fundamental shifts in our climate system that wi
                     self.plot_seasonal_analysis()
                 elif plot_type == "decadal":
                     self.plot_decadal_changes()
-                
                 self.fig.tight_layout()
                 self.canvas.draw()
         except Exception as e:
@@ -549,7 +681,7 @@ These decadal changes represent fundamental shifts in our climate system that wi
     
     def plot_temperature_trends(self):
         ax = self.fig.add_subplot(111)
-        ax.set_facecolor('#34495e')
+        ax.set_facecolor(self.colors['plot_bg'])
         
         years = self.analysis.df['Year']
         temps = self.analysis.df['annual_temp']
@@ -557,35 +689,35 @@ These decadal changes represent fundamental shifts in our climate system that wi
         if self.temp_unit.get() == 'Fahrenheit':
             temps = self.celsius_to_fahrenheit(temps)
         
-        ax.plot(years, temps, color='#3498db', linewidth=2, label='Annual Temperature')
+        ax.plot(years, temps, color=self.colors['plot_line1'], linewidth=2, label='Annual Temperature')
         
         z = np.polyfit(years, temps, 1)
         p = np.poly1d(z)
-        ax.plot(years, p(years), color='#e74c3c', linestyle='--', 
+        ax.plot(years, p(years), color=self.colors['plot_line2'], linestyle='--', 
                 linewidth=2, label=f'Trend (slope: {z[0]:.4f}°{self.temp_unit.get()[0]}/year)')
         
         rolling_avg = temps.rolling(window=10).mean()
-        ax.plot(years, rolling_avg, color='#2ecc71', linewidth=2, 
+        ax.plot(years, rolling_avg, color=self.colors['plot_line3'], linewidth=2, 
                 label='10-Year Moving Average')
         
-        ax.set_title('Global Temperature Anomalies', color='white', pad=20,
-                    font={'size': 14, 'weight': 'normal'})
-        ax.set_xlabel('Year', color='white')
-        ax.set_ylabel(f'Temperature Anomaly (°{self.temp_unit.get()[0]})', color='white')
-        ax.grid(True, alpha=0.2, color='#3498db')
-        ax.legend(facecolor='#34495e', edgecolor='white')
+        ax.set_title('Global Temperature Anomalies', color=self.colors['accent'], pad=20,
+                    font={'size': 14, 'weight': 'bold'})
+        ax.set_xlabel('Year', color=self.colors['text'])
+        ax.set_ylabel(f'Temperature Anomaly (°{self.temp_unit.get()[0]})', color=self.colors['text'])
+        ax.grid(True, alpha=0.2, color=self.colors['plot_grid'])
+        ax.legend(facecolor=self.colors['panel'], edgecolor=self.colors['plot_line2'])
         
-        ax.spines['bottom'].set_color('#3498db')
-        ax.spines['top'].set_color('#3498db')
-        ax.spines['left'].set_color('#3498db')
-        ax.spines['right'].set_color('#3498db')
-        ax.tick_params(colors='white')
+        ax.spines['bottom'].set_color(self.colors['plot_line2'])
+        ax.spines['top'].set_color(self.colors['plot_line2'])
+        ax.spines['left'].set_color(self.colors['plot_line2'])
+        ax.spines['right'].set_color(self.colors['plot_line2'])
+        ax.tick_params(colors=self.colors['text'])
         
         self.add_hover_annotation(ax)
     
     def plot_monthly_trends(self):
         ax = self.fig.add_subplot(111)
-        ax.set_facecolor('#34495e')
+        ax.set_facecolor(self.colors['plot_bg'])
         
         months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -593,27 +725,27 @@ These decadal changes represent fundamental shifts in our climate system that wi
         data = self.analysis.df[months].values
         years = self.analysis.df['Year'].values
         
-        im = ax.imshow(data.T, aspect='auto', cmap='RdYlBu_r',
+        im = ax.imshow(data.T, aspect='auto', cmap='coolwarm',
                       extent=[years[0], years[-1], -0.5, 11.5])
         
-        ax.set_title('Monthly Temperature Patterns', color='white', pad=20,
-                    font={'size': 14, 'weight': 'normal'})
-        ax.set_xlabel('Year', color='white')
-        ax.set_ylabel('Month', color='white')
+        ax.set_title('Monthly Temperature Patterns', color=self.colors['accent'], pad=20,
+                    font={'size': 14, 'weight': 'bold'})
+        ax.set_xlabel('Year', color=self.colors['text'])
+        ax.set_ylabel('Month', color=self.colors['text'])
         ax.set_yticks(range(12))
-        ax.set_yticklabels(months, color='white')
-        ax.tick_params(colors='white')
+        ax.set_yticklabels(months, color=self.colors['text'])
+        ax.tick_params(colors=self.colors['text'])
         
         colorbar = self.fig.colorbar(im, ax=ax)
-        colorbar.set_label('Temperature Anomaly (°C)', color='white', 
+        colorbar.set_label('Temperature Anomaly (°C)', color=self.colors['accent'], 
                           fontsize=10, labelpad=10)
-        colorbar.ax.yaxis.set_tick_params(color='white')
-        plt.setp(colorbar.ax.get_yticklabels(), color='white')
+        colorbar.ax.yaxis.set_tick_params(color=self.colors['text'])
+        plt.setp(colorbar.ax.get_yticklabels(), color=self.colors['text'])
         
-        ax.grid(True, alpha=0.2, color='#3498db')
+        ax.grid(True, alpha=0.2, color=self.colors['plot_grid'])
         
         for spine in ax.spines.values():
-            spine.set_color('#3498db')
+            spine.set_color(self.colors['plot_line2'])
         
         self.add_hover_annotation(ax)
     
@@ -627,14 +759,19 @@ These decadal changes represent fundamental shifts in our climate system that wi
         years = self.analysis.df['Year']
         unit_symbol = '°F' if self.temp_unit.get() == 'Fahrenheit' else '°C'
         
-        self.fig.suptitle('Seasonal Temperature Patterns', color='white', 
-                         y=0.95, font={'size': 14, 'weight': 'normal'})
+        self.fig.suptitle('Seasonal Temperature Patterns', color=self.colors['accent'], 
+                         y=0.95, font={'size': 14, 'weight': 'bold'})
         
-        colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f']
+        colors = [
+            '#FF6B6B',  # Winter (DJF) - red
+            self.colors['pro_green'],  # Spring (MAM) - professional green
+            self.colors['plot_line2'],  # Summer (JJA) - blue
+            self.colors['plot_line4']   # Fall (SON) - gold/yellow
+        ]
         
         for i, ((season_code, season_name), color) in enumerate(zip(seasons.items(), colors), 1):
             ax = self.fig.add_subplot(2, 2, i)
-            ax.set_facecolor('#34495e')
+            ax.set_facecolor(self.colors['plot_bg'])
             temps = self.analysis.df[season_code]
             
             if self.temp_unit.get() == 'Fahrenheit':
@@ -644,25 +781,25 @@ These decadal changes represent fundamental shifts in our climate system that wi
             
             z = np.polyfit(years, temps, 1)
             p = np.poly1d(z)
-            ax.plot(years, p(years), color='white', linestyle='--', 
+            ax.plot(years, p(years), color=self.colors['accent'], linestyle='--', 
                    linewidth=2, label=f'Trend: {z[0]:.4f}{unit_symbol}/year')
             
-            ax.set_title(season_name, color='white')
-            ax.set_xlabel('Year', color='white')
-            ax.set_ylabel(f'Temperature ({unit_symbol})', color='white')
-            ax.grid(True, alpha=0.2, color='#3498db')
-            ax.legend(facecolor='#34495e', edgecolor='white')
-            ax.tick_params(colors='white')
+            ax.set_title(season_name, color=self.colors['accent'])
+            ax.set_xlabel('Year', color=self.colors['text'])
+            ax.set_ylabel(f'Temperature ({unit_symbol})', color=self.colors['text'])
+            ax.grid(True, alpha=0.2, color=self.colors['plot_grid'])
+            ax.legend(facecolor=self.colors['panel'], edgecolor=self.colors['plot_line2'])
+            ax.tick_params(colors=self.colors['text'])
             
             for spine in ax.spines.values():
-                spine.set_color('#3498db')
+                spine.set_color(self.colors['plot_line2'])
             
             self.add_hover_annotation(ax)
     
     def plot_decadal_changes(self):
         self.clear_plot()
         ax = self.fig.add_subplot(111)
-        ax.set_facecolor('#34495e')
+        ax.set_facecolor(self.colors['plot_bg'])
         
         self.analysis.df['Decade'] = (self.analysis.df['Year'] // 10) * 10
         decadal_avg = self.analysis.df.groupby('Decade')['annual_temp'].mean()
@@ -683,7 +820,7 @@ These decadal changes represent fundamental shifts in our climate system that wi
         
         # Plot the data points with error bars
         line = ax.errorbar(decades, decadal_avg, yerr=decadal_std,
-                          color='#3498db', capsize=5, capthick=2,
+                          color=self.colors['plot_line1'], capsize=5, capthick=2,
                           marker='o', linewidth=2, label='Decadal Average')
         
         # Calculate and plot trend line
@@ -691,7 +828,7 @@ These decadal changes represent fundamental shifts in our climate system that wi
             z = np.polyfit(decades, decadal_avg, 1)
             p = np.poly1d(z)
             trend_line, = ax.plot(decades, p(decades), 
-                                color='#e74c3c', linestyle='--', 
+                                color=self.colors['plot_line2'], linestyle='--', 
                                 linewidth=2, label='Trend')
             
             warming_rate = z[0]
@@ -707,28 +844,28 @@ These decadal changes represent fundamental shifts in our climate system that wi
                               transform=ax.transAxes,
                               verticalalignment='top', 
                               horizontalalignment='right',
-                              color='white', fontsize=10,
+                              color=self.colors['text'], fontsize=10,
                               bbox=dict(boxstyle='round,pad=0.5', 
-                                      facecolor='#34495e', 
-                                      edgecolor='#3498db', 
+                                      facecolor=self.colors['panel'], 
+                                      edgecolor=self.colors['plot_line2'], 
                                       alpha=0.9))
         
         # Add value labels
         for x, y in zip(decades, decadal_avg):
             ax.text(x, y + 0.02, f'{y:.2f}{unit_symbol}',
-                   ha='center', va='bottom', color='white')
+                   ha='center', va='bottom', color=self.colors['text'])
         
-        ax.set_title('Decadal Temperature Changes', color='white', pad=20,
-                    font={'size': 14, 'weight': 'normal'})
-        ax.set_xlabel('Decade', color='white')
-        ax.set_ylabel(f'Temperature ({unit_symbol})', color='white')
-        ax.grid(True, alpha=0.2)
-        ax.tick_params(colors='white')
+        ax.set_title('Decadal Temperature Changes', color=self.colors['accent'], pad=20,
+                    font={'size': 14, 'weight': 'bold'})
+        ax.set_xlabel('Decade', color=self.colors['text'])
+        ax.set_ylabel(f'Temperature ({unit_symbol})', color=self.colors['text'])
+        ax.grid(True, alpha=0.2, color=self.colors['plot_grid'])
+        ax.tick_params(colors=self.colors['text'])
         
         for spine in ax.spines.values():
-            spine.set_color('#3498db')
+            spine.set_color(self.colors['plot_line2'])
             
-        ax.legend(facecolor='#34495e', edgecolor='white', loc='upper left')
+        ax.legend(facecolor=self.colors['panel'], edgecolor=self.colors['plot_line2'], loc='upper left')
         self.canvas.draw()
     
     def add_hover_annotation(self, ax):
@@ -766,140 +903,208 @@ These decadal changes represent fundamental shifts in our climate system that wi
     
     def show_statistics(self):
         self.text_widget.pack(fill=tk.BOTH, expand=True)
+        self.text_widget.configure(state='normal')
         self.text_widget.delete(1.0, tk.END)
-        
         stats = self.analysis.calculate_statistics()
         df = self.analysis.df
         unit_symbol = '°F' if self.temp_unit.get() == 'Fahrenheit' else '°C'
-        
-        monthly_std = df[['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']].std()
+        # Sea ice statistics
+        min_area = max_area = mean_area = trend = min_year = max_year = std_area = percent_change = None
+        decadal_avg = record_lows = None
+        try:
+            for h in range(10):
+                sea_ice_df = pd.read_excel('data/N_Sea_Ice_Index_Regional_Monthly_Data_G02135_v3.0.xlsx', header=h)
+                cols = [str(col).strip() for col in sea_ice_df.columns]
+                months = ['January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December']
+                month_cols = [col for col in cols if col in months]
+                if len(month_cols) == 12:
+                    break
+            sea_ice_df.columns = [str(col).strip() for col in sea_ice_df.columns]
+            month_cols = [col for col in sea_ice_df.columns if col in months]
+            keep_cols = ['Year'] + month_cols
+            sea_ice_df = sea_ice_df.rename(columns={sea_ice_df.columns[0]: 'Year'})
+            sea_ice_df = sea_ice_df[keep_cols]
+            sea_ice_df['Year'] = pd.to_numeric(sea_ice_df['Year'], errors='coerce')
+            for m in month_cols:
+                sea_ice_df[m] = pd.to_numeric(sea_ice_df[m], errors='coerce')
+            sea_ice_df = sea_ice_df.dropna(subset=['Year'])
+            sea_ice_df['Annual_Avg_Area'] = sea_ice_df[month_cols].mean(axis=1)
+            min_area = sea_ice_df['Annual_Avg_Area'].min()
+            max_area = sea_ice_df['Annual_Avg_Area'].max()
+            mean_area = sea_ice_df['Annual_Avg_Area'].mean()
+            std_area = sea_ice_df['Annual_Avg_Area'].std()
+            z = np.polyfit(sea_ice_df['Year'], sea_ice_df['Annual_Avg_Area'], 1)
+            trend = z[0]
+            min_year = int(sea_ice_df.loc[sea_ice_df['Annual_Avg_Area'].idxmin(), 'Year'])
+            max_year = int(sea_ice_df.loc[sea_ice_df['Annual_Avg_Area'].idxmax(), 'Year'])
+            percent_change = 100 * (sea_ice_df['Annual_Avg_Area'].iloc[-1] - sea_ice_df['Annual_Avg_Area'].iloc[0]) / sea_ice_df['Annual_Avg_Area'].iloc[0]
+            sea_ice_df['Decade'] = (sea_ice_df['Year'] // 10) * 10
+            decadal_avg = sea_ice_df.groupby('Decade')['Annual_Avg_Area'].mean()
+            record_lows = sea_ice_df.nsmallest(5, 'Annual_Avg_Area')[['Year', 'Annual_Avg_Area']]
+        except Exception as e:
+            pass  # variables are already set to None
+        # --- ENHANCED CLIMATE STATS PANEL ---
+        self.text_widget.tag_configure('title', font=('Segoe UI', 16, 'bold'), foreground=self.colors['accent'], spacing1=10, spacing3=5)
+        self.text_widget.tag_configure('header', font=('Segoe UI', 12, 'bold'), foreground=self.colors['plot_line1'], spacing1=5, spacing3=3)
+        self.text_widget.tag_configure('subheader', font=('Segoe UI', 11, 'bold'), foreground=self.colors['plot_line2'], spacing1=3, spacing3=2)
+        self.text_widget.tag_configure('value', font=('Segoe UI', 10), foreground=self.colors['text'], spacing1=2)
+        self.text_widget.tag_configure('impact', font=('Segoe UI', 10, 'italic'), foreground=self.colors['plot_line4'], spacing1=2)
+        self.text_widget.tag_configure('alert', font=('Segoe UI', 10, 'bold'), foreground=self.colors['plot_line1'], spacing1=2)
+
+        # Temperature Trends
+        self.text_widget.insert(tk.END, "Temperature Trends\n", 'header')
+        warming_rate = np.polyfit(df['Year'], df['annual_temp'], 1)[0]
+        hottest_year = int(df.loc[df['annual_temp'].idxmax(), 'Year'])
+        coldest_year = int(df.loc[df['annual_temp'].idxmin(), 'Year'])
+        self.text_widget.insert(tk.END, (
+            f"• Warming rate: {warming_rate:.4f}{unit_symbol}/year\n"
+            f"• Hottest year: {hottest_year}\n"
+            f"• Coldest year: {coldest_year}\n\n"
+        ), 'value')
+
+        # Monthly Temperature Patterns
+        self.text_widget.insert(tk.END, "Monthly Temperature Patterns\n", 'header')
+        monthly_std = df[['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']].std()
         most_variable_month = monthly_std.idxmax()
         least_variable_month = monthly_std.idxmin()
-        
-        extreme_threshold = df['annual_temp'].mean() + 2 * df['annual_temp'].std()
-        extreme_years = df[df['annual_temp'] > extreme_threshold]['Year'].tolist()
-        
-        early_trend = np.polyfit(df['Year'][:len(df)//2], df['annual_temp'][:len(df)//2], 1)[0]
-        late_trend = np.polyfit(df['Year'][len(df)//2:], df['annual_temp'][len(df)//2:], 1)[0]
-        warming_acceleration = late_trend - early_trend
-        
-        self.text_widget.tag_configure('title', 
-                                    font=('Helvetica', 16, 'bold'),
-                                    foreground='#ffffff',
-                                    spacing1=10,
-                                    spacing3=5)
-        
-        self.text_widget.tag_configure('header', 
-                                    font=('Helvetica', 12, 'bold'),
-                                    foreground='#e74c3c',
-                                    spacing1=5,
-                                    spacing3=3)
-        
-        self.text_widget.tag_configure('subheader', 
-                                    font=('Helvetica', 11, 'bold'),
-                                    foreground='#3498db',
-                                    spacing1=3,
-                                    spacing3=2)
-        
-        self.text_widget.tag_configure('value', 
-                                    font=('Helvetica', 10),
-                                    foreground='#bdbdbd',
-                                    spacing1=2)
-        
-        self.text_widget.tag_configure('impact', 
-                                    font=('Helvetica', 10, 'italic'),
-                                    foreground='#e67e22',
-                                    spacing1=2)
-        
-        self.text_widget.tag_configure('alert', 
-                                    font=('Helvetica', 10, 'bold'),
-                                    foreground='#e74c3c',
-                                    spacing1=2)
-        
-        self.text_widget.insert(tk.END, "Climate Change Impact Analysis\n", 'title')
-        self.text_widget.insert(tk.END, "Understanding the Human Impact of Temperature Changes\n\n", 'subheader')
-        
-        self.text_widget.insert(tk.END, "🔍 Key Findings\n", 'header')
-        total_change = stats['extremes']['warmest_temp'] - stats['extremes']['coldest_temp']
-        
-        self.text_widget.insert(tk.END, "Temperature Change:\n", 'subheader')
-        self.text_widget.insert(tk.END, 
-            f"• Total temperature change: {total_change:.2f}{unit_symbol}\n", 'value')
-        self.text_widget.insert(tk.END,
-            "→ This change is equivalent to the difference between a comfortable spring day "
-            "and a severe heat warning.\n", 'impact')
-        
-        self.text_widget.insert(tk.END, "\nWarming Acceleration:\n", 'subheader')
-        self.text_widget.insert(tk.END,
-            f"• Recent warming rate: {late_trend:.4f}{unit_symbol}/year\n"
-            f"• Earlier warming rate: {early_trend:.4f}{unit_symbol}/year\n"
-            f"• Acceleration: {warming_acceleration:.4f}{unit_symbol}/year²\n", 'value')
-        self.text_widget.insert(tk.END,
-            "→ The rate of warming is increasing, making adaptation more challenging for "
-            "communities and ecosystems.\n", 'impact')
-        
-        self.text_widget.insert(tk.END, "\n⚠️ Extreme Events:\n", 'header')
-        self.text_widget.insert(tk.END,
-            f"• Number of extreme temperature years: {len(extreme_years)}\n"
-            f"• Most recent extreme years: {', '.join(map(str, sorted(extreme_years)[-3:]))}\n", 'value')
-        if len(extreme_years) > 0:
-            self.text_widget.insert(tk.END,
-                "→ Extreme temperatures increase risks of:\n"
-                "   - Heat-related health issues\n"
-                "   - Strain on power grids\n"
-                "   - Agricultural challenges\n"
-                "   - Water resource stress\n", 'alert')
-        
-        self.text_widget.insert(tk.END, "\n🌡️ Seasonal Vulnerability:\n", 'header')
+        self.text_widget.insert(tk.END, (
+            f"• Most variable month: {most_variable_month}\n"
+            f"• Least variable month: {least_variable_month}\n"
+            f"• Winter months warming faster than summer months\n\n"
+        ), 'value')
+
+        # Seasonal Temperature Analysis
+        self.text_widget.insert(tk.END, "Seasonal Temperature Analysis\n", 'header')
         winter_trend = stats['seasonal_trends']['DJF']
         summer_trend = stats['seasonal_trends']['JJA']
-        
-        self.text_widget.insert(tk.END,
+        self.text_widget.insert(tk.END, (
             f"• Winter warming rate: {winter_trend:.4f}{unit_symbol}/year\n"
             f"• Summer warming rate: {summer_trend:.4f}{unit_symbol}/year\n"
-            f"• Most variable month: {most_variable_month}\n", 'value')
-        
-        seasonal_impact = (
-            "→ Changing seasonal patterns affect:\n"
-            "   - Agricultural growing seasons\n"
-            "   - Wildlife migration patterns\n"
-            "   - Winter recreation activities\n"
-            "   - Energy consumption patterns\n"
-        )
-        self.text_widget.insert(tk.END, seasonal_impact, 'impact')
-        
-        self.text_widget.insert(tk.END, "\n🔮 Future Implications:\n", 'header')
-        years_to_threshold = 10
-        projected_change = late_trend * years_to_threshold
-        
-        self.text_widget.insert(tk.END,
-            f"• Projected {years_to_threshold}-year change: {projected_change:.2f}{unit_symbol}\n", 'value')
-        
-        projection_impact = (
-            "→ Without intervention, we can expect:\n"
-            "   - Increased frequency of extreme weather\n"
-            "   - Greater stress on vulnerable populations\n"
-            "   - More challenges for agriculture and food security\n"
-            "   - Higher adaptation costs for communities\n"
-        )
-        self.text_widget.insert(tk.END, projection_impact, 'alert')
-        
-        self.text_widget.insert(tk.END, "\n💡 What Can Be Done:\n", 'header')
-        action_items = (
-            "• Support climate-resilient infrastructure\n"
-            "• Implement early warning systems for extreme weather\n"
-            "• Develop community cooling centers\n"
-            "• Protect vulnerable populations\n"
-            "• Invest in renewable energy\n"
-            "• Enhance urban green spaces\n"
-        )
-        self.text_widget.insert(tk.END, action_items, 'value')
-        
+            f"• Spring/fall show increasing instability\n\n"
+        ), 'value')
+
+        # Decadal Changes
+        self.text_widget.insert(tk.END, "Decadal Changes\n", 'header')
+        df['Decade'] = (df['Year'] // 10) * 10
+        decadal_avg = df.groupby('Decade')['annual_temp'].mean()
+        decadal_change = decadal_avg.iloc[-1] - decadal_avg.iloc[0]
+        self.text_widget.insert(tk.END, (
+            f"• Change from first to last decade: {decadal_change:.2f}{unit_symbol}\n"
+            f"• Hottest decade: {int(decadal_avg.idxmax())}s\n"
+            f"• Coldest decade: {int(decadal_avg.idxmin())}s\n\n"
+        ), 'value')
+
+        # Sea Ice Trends
+        self.text_widget.insert(tk.END, "Sea Ice Trends\n", 'header')
+        if min_area is not None:
+            self.text_widget.insert(tk.END, (
+                f"• Min annual avg area: {min_area:,.0f} sq km (Year: {min_year})\n"
+                f"• Max annual avg area: {max_area:,.0f} sq km (Year: {max_year})\n"
+                f"• Mean annual avg area: {mean_area:,.0f} sq km\n"
+                f"• Standard deviation: {std_area:,.0f} sq km\n"
+                f"• Trend: {trend:,.0f} sq km/year\n"
+                f"• Percent change (first to last year): {percent_change:.2f}%\n"
+                f"• Decadal averages (sq km):\n"
+            ), 'value')
+            for decade, avg in decadal_avg.items():
+                self.text_widget.insert(tk.END, f"   {int(decade)}s: {avg:,.0f} sq km\n", 'value')
+            self.text_widget.insert(tk.END, "• Record low years:\n", 'value')
+            for _, row in record_lows.iterrows():
+                self.text_widget.insert(tk.END, f"   {int(row['Year'])}: {row['Annual_Avg_Area']:,.0f} sq km\n", 'value')
+        else:
+            self.text_widget.insert(tk.END, "Sea ice data unavailable or could not be processed.\n", 'alert')
         self.text_widget.configure(state='disabled')
 
     def clear_plot(self):
         self.fig.clf()
+
+    def plot_sea_ice_trends(self, path='data/N_Sea_Ice_Index_Regional_Monthly_Data_G02135_v3.0.xlsx'):
+        """Process and plot annual average sea ice area over time."""
+        # Try different header rows to find the one with all months
+        for h in range(10):  # Try first 10 rows
+            df = pd.read_excel(path, header=h)
+            cols = [str(col).strip() for col in df.columns]
+            months = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December']
+            month_cols = [col for col in cols if col in months]
+            print(f"header={h}: {month_cols}")
+            if len(month_cols) == 12:
+                print(f"Found all months at header={h}")
+                break
+        df.columns = [str(col).strip() for col in df.columns]
+        months = ['January', 'February', 'March', 'April', 'May', 'June',
+                  'July', 'August', 'September', 'October', 'November', 'December']
+        # Find columns that match months exactly
+        month_cols = [col for col in df.columns if col in months]
+        if len(month_cols) != 12:
+            print('DEBUG: Columns found:', df.columns.tolist())
+            raise ValueError(f"Could not find all month columns. Found: {month_cols}")
+        keep_cols = ['Year'] + month_cols
+        df = df.rename(columns={df.columns[0]: 'Year'})
+        df = df[keep_cols]
+        df['Year'] = pd.to_numeric(df['Year'], errors='coerce')
+        for m in month_cols:
+            df[m] = pd.to_numeric(df[m], errors='coerce')
+        df = df.dropna(subset=['Year'])
+        df['Annual_Avg_Area'] = df[month_cols].mean(axis=1)
+        self.fig.clear()
+        ax = self.fig.add_subplot(111)
+        ax.plot(df['Year'], df['Annual_Avg_Area'], marker='o', color=self.colors['plot_line2'], label='Annual Avg Sea Ice Area', linewidth=2)
+        ax.set_title('Annual Average Sea Ice Area (Northern Hemisphere)', fontsize=14, color=self.colors['accent'])
+        ax.set_xlabel('Year', color=self.colors['text'])
+        ax.set_ylabel('Sea Ice Area (sq km)', color=self.colors['text'])
+        ax.grid(True, alpha=0.3, color=self.colors['plot_grid'])
+        ax.legend(facecolor=self.colors['panel'], edgecolor=self.colors['plot_line2'])
+        ax.set_facecolor(self.colors['plot_bg'])
+        ax.tick_params(colors=self.colors['text'])
+        for spine in ax.spines.values():
+            spine.set_color(self.colors['plot_line2'])
+        self.canvas.draw()
+        return df
+
+    def animate_sea_ice_trends(self, path='data/N_Sea_Ice_Index_Regional_Monthly_Data_G02135_v3.0.xlsx'):
+        # Try different header rows to find the one with all months
+        for h in range(10):
+            df = pd.read_excel(path, header=h)
+            cols = [str(col).strip() for col in df.columns]
+            months = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December']
+            month_cols = [col for col in cols if col in months]
+            if len(month_cols) == 12:
+                break
+        df.columns = [str(col).strip() for col in df.columns]
+        month_cols = [col for col in df.columns if col in months]
+        keep_cols = ['Year'] + month_cols
+        df = df.rename(columns={df.columns[0]: 'Year'})
+        df = df[keep_cols]
+        df['Year'] = pd.to_numeric(df['Year'], errors='coerce')
+        for m in month_cols:
+            df[m] = pd.to_numeric(df[m], errors='coerce')
+        df = df.dropna(subset=['Year'])
+        df['Annual_Avg_Area'] = df[month_cols].mean(axis=1)
+        self.fig.clear()
+        ax = self.fig.add_subplot(111)
+        years = df['Year'].values
+        area = df['Annual_Avg_Area'].values
+        ax.set_xlim(years.min(), years.max())
+        ax.set_ylim(area.min() - 0.1 * area.ptp(), area.max() + 0.1 * area.ptp())
+        line, = ax.plot([], [], color=self.colors['plot_line2'], linewidth=2, marker='o', label='Annual Avg Sea Ice Area')
+        ax.set_title('Sea Ice Area Animation', color=self.colors['accent'])
+        ax.set_xlabel('Year', color=self.colors['text'])
+        ax.set_ylabel('Sea Ice Area (sq km)', color=self.colors['text'])
+        ax.grid(True, alpha=0.3, color=self.colors['plot_grid'])
+        ax.legend()
+        ax.set_facecolor(self.colors['plot_bg'])
+        ax.tick_params(colors=self.colors['text'])
+        for spine in ax.spines.values():
+            spine.set_color(self.colors['plot_line2'])
+        def animate(frame):
+            if frame > 0:
+                line.set_data(years[:frame], area[:frame])
+            return [line]
+        self.anim = FuncAnimation(self.fig, animate, frames=len(years) + 1, interval=50, blit=False, repeat=False)
+        self.canvas.draw()
 
 def main():
     root = tk.Tk()
