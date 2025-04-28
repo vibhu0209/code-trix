@@ -2,19 +2,24 @@ Climate Analysis Statistics
 =========================
 
 Dataset: GHCNv4/ERSSTv5
-Date Range: 2002 - 2025
-
-Overall Statistics:
-Mean Temperature Anomaly: 0.096°C
-Standard Deviation: 0.224°C
-Temperature Trend: 0.0278°C/year
+Year Range: 2002 - 2025
 
 Extreme Values:
 Warmest Year: 2025 (0.594°C)
 Coldest Year: 2004 (-0.185°C)
+
+Temperature Trends:
+Linear Trend: 0.0278°C/year
+Quadratic Trend: 0.0014°C/year²
+10-Year Rolling Standard Deviation: 0.1152°C
 
 Seasonal Trends (°C/year):
 DJF: 0.0258
 MAM: nan
 JJA: nan
 SON: nan
+
+Temperature Variability:
+Annual Standard Deviation: 0.2240°C
+Monthly Standard Deviation: 0.2307°C
+Seasonal Standard Deviation: 0.2211°C

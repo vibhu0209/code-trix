@@ -13,20 +13,16 @@ from datetime import datetime
 
 class ClimateAnalysis:
     def __init__(self, data_path='data/GLB.Ts+dSST.csv'):
-        """Initialize the ClimateAnalysis class with data path."""
         self.data_path = data_path
         self.df = None
         self.dataset_type = None
         self.load_and_clean_data()
 
     def load_and_clean_data(self):
-        """Load and clean the NASA GISS temperature dataset."""
         try:
-            # Read the full file content
             with open(self.data_path, 'r') as file:
                 content = file.readlines()
 
-            # Determine dataset sections
             sections = {
                 'AIRS v6': [],
                 'AIRS v7': [],
@@ -44,18 +40,13 @@ class ClimateAnalysis:
                 elif current_section and line.strip():
                     sections[current_section].append(line)
 
-            # Default to GHCNv4/ERSSTv5 dataset
             self.dataset_type = 'GHCNv4/ERSSTv5'
             data_lines = sections[self.dataset_type]
             
-            # Parse the data
             header = data_lines[0].strip().split(',')
             data = [line.strip().split(',') for line in data_lines[1:]]
             
-            # Create DataFrame
             self.df = pd.DataFrame(data, columns=header)
-            
-            # Clean and convert data types
             self.clean_data()
             
             print("Data loaded and cleaned successfully!")
@@ -66,11 +57,8 @@ class ClimateAnalysis:
             raise
 
     def clean_data(self):
-        """Clean and prepare the data for analysis."""
-        # Convert Year to numeric
         self.df['Year'] = pd.to_numeric(self.df['Year'], errors='coerce')
         
-        # Process monthly columns
         month_columns = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         
@@ -78,21 +66,17 @@ class ClimateAnalysis:
             self.df[col] = self.df[col].replace('*******', np.nan)
             self.df[col] = pd.to_numeric(self.df[col], errors='coerce')
         
-        # Process seasonal columns
         season_columns = ['DJF', 'MAM', 'JJA', 'SON']
         for col in season_columns:
             self.df[col] = self.df[col].replace('*******', np.nan)
             self.df[col] = pd.to_numeric(self.df[col], errors='coerce')
         
-        # Calculate annual average
         self.df['annual_temp'] = self.df[month_columns].mean(axis=1)
         
-        # Remove rows with all NaN values
         self.df = self.df.dropna(subset=['Year'])
         self.df = self.df[self.df['Year'] != '*******']
 
     def change_dataset(self, dataset_type):
-        """Change the current dataset being analyzed."""
         if dataset_type in ['AIRS v6', 'AIRS v7', 'GHCNv4/ERSSTv5']:
             self.dataset_type = dataset_type
             self.load_and_clean_data()
@@ -100,12 +84,9 @@ class ClimateAnalysis:
             raise ValueError("Invalid dataset type")
 
     def plot_global_temperature_trend(self):
-        """Create an enhanced line plot for global temperature trends."""
         if 'Year' in self.df.columns and 'annual_temp' in self.df.columns:
-            # Create figure with secondary y-axis
             fig = make_subplots(specs=[[{"secondary_y": True}]])
             
-            # Add temperature trend
             fig.add_trace(
                 go.Scatter(
                     x=self.df['Year'],
@@ -117,7 +98,6 @@ class ClimateAnalysis:
                 secondary_y=False
             )
             
-            # Calculate and add trend line
             z = np.polyfit(self.df['Year'], self.df['annual_temp'], 1)
             p = np.poly1d(z)
             
@@ -131,7 +111,6 @@ class ClimateAnalysis:
                 secondary_y=False
             )
             
-            # Calculate and add rolling average
             rolling_avg = self.df['annual_temp'].rolling(window=10).mean()
             fig.add_trace(
                 go.Scatter(
@@ -143,7 +122,6 @@ class ClimateAnalysis:
                 secondary_y=False
             )
             
-            # Calculate rate of change
             temp_change = self.df['annual_temp'].diff()
             fig.add_trace(
                 go.Scatter(
@@ -155,7 +133,6 @@ class ClimateAnalysis:
                 secondary_y=True
             )
             
-            # Update layout
             fig.update_layout(
                 title=f"Global Temperature Anomalies ({self.dataset_type})",
                 xaxis_title="Year",
@@ -171,11 +148,9 @@ class ClimateAnalysis:
             print("Required columns not found in dataset")
 
     def plot_monthly_trends(self):
-        """Create an enhanced heatmap of monthly temperature trends."""
         month_columns = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         
-        # Create a pivot table for the heatmap
         monthly_data = self.df[['Year'] + month_columns].copy()
         monthly_data = monthly_data.melt(
             id_vars=['Year'], 
@@ -184,7 +159,6 @@ class ClimateAnalysis:
             value_name='Temperature'
         )
         
-        # Create figure with subplots
         fig = make_subplots(
             rows=2, cols=1,
             subplot_titles=("Monthly Temperature Patterns", "Monthly Temperature Distributions"),
@@ -192,7 +166,6 @@ class ClimateAnalysis:
             row_heights=[0.7, 0.3]
         )
         
-        # Add heatmap
         heatmap = go.Heatmap(
             x=monthly_data['Month'],
             y=monthly_data['Year'],
@@ -202,7 +175,6 @@ class ClimateAnalysis:
         )
         fig.add_trace(heatmap, row=1, col=1)
         
-        # Add box plots for monthly distributions
         for month in month_columns:
             fig.add_trace(
                 go.Box(
@@ -213,7 +185,6 @@ class ClimateAnalysis:
                 row=2, col=1
             )
         
-        # Update layout
         fig.update_layout(
             height=1000,
             title_text=f"Monthly Temperature Analysis ({self.dataset_type})",
@@ -223,19 +194,16 @@ class ClimateAnalysis:
         return fig
 
     def calculate_decadal_changes(self):
-        """Calculate and visualize temperature changes by decade."""
         self.df['Decade'] = (self.df['Year'] // 10) * 10
         decadal_avg = self.df.groupby('Decade')['annual_temp'].agg(['mean', 'std', 'count'])
         decadal_change = decadal_avg['mean'].diff()
         
-        # Create figure with subplots
         fig = make_subplots(
             rows=2, cols=1,
             subplot_titles=("Decadal Temperature Changes", "Decadal Statistics"),
             vertical_spacing=0.2
         )
         
-        # Add bar chart for temperature changes
         fig.add_trace(
             go.Bar(
                 x=decadal_change.index,
@@ -247,25 +215,22 @@ class ClimateAnalysis:
             row=1, col=1
         )
         
-        # Add line for mean temperatures
         fig.add_trace(
             go.Scatter(
                 x=decadal_avg.index,
                 y=decadal_avg['mean'],
                 name='Mean Temperature',
-                mode='lines+markers',
-                line=dict(color='red')
+                mode='lines+markers'
             ),
             row=2, col=1
         )
         
-        # Add error bars for standard deviation
         fig.add_trace(
             go.Scatter(
                 x=decadal_avg.index,
                 y=decadal_avg['mean'] + decadal_avg['std'],
-                name='Upper Bound (+1 SD)',
-                line=dict(dash='dash', color='gray'),
+                name='Upper Bound',
+                line=dict(dash='dash'),
                 showlegend=False
             ),
             row=2, col=1
@@ -275,14 +240,14 @@ class ClimateAnalysis:
             go.Scatter(
                 x=decadal_avg.index,
                 y=decadal_avg['mean'] - decadal_avg['std'],
-                name='Lower Bound (-1 SD)',
-                line=dict(dash='dash', color='gray'),
+                name='Lower Bound',
+                line=dict(dash='dash'),
+                showlegend=False,
                 fill='tonexty'
             ),
             row=2, col=1
         )
         
-        # Update layout
         fig.update_layout(
             height=800,
             title_text=f"Decadal Temperature Analysis ({self.dataset_type})",
@@ -293,53 +258,45 @@ class ClimateAnalysis:
         return fig
 
     def calculate_statistics(self):
-        """Calculate comprehensive statistics for the dataset."""
-        stats = {
-            'date_range': {
-                'start': int(self.df['Year'].min()),
-                'end': int(self.df['Year'].max())
-            },
-            'overall': {
-                'mean': self.df['annual_temp'].mean(),
-                'std': self.df['annual_temp'].std(),
-                'trend': np.polyfit(self.df['Year'], self.df['annual_temp'], 1)[0]
-            },
-            'extremes': {
-                'warmest_year': int(self.df.loc[self.df['annual_temp'].idxmax(), 'Year']),
-                'coldest_year': int(self.df.loc[self.df['annual_temp'].idxmin(), 'Year']),
-                'warmest_temp': float(self.df['annual_temp'].max()),
-                'coldest_temp': float(self.df['annual_temp'].min())
-            }
+        stats = {}
+        
+        stats['extremes'] = {
+            'warmest_temp': self.df['annual_temp'].max(),
+            'coldest_temp': self.df['annual_temp'].min(),
+            'warmest_year': self.df.loc[self.df['annual_temp'].idxmax(), 'Year'],
+            'coldest_year': self.df.loc[self.df['annual_temp'].idxmin(), 'Year']
         }
         
-        # Calculate seasonal trends
-        seasons = ['DJF', 'MAM', 'JJA', 'SON']
-        stats['seasonal_trends'] = {}
-        for season in seasons:
-            trend = np.polyfit(self.df['Year'], self.df[season], 1)[0]
-            stats['seasonal_trends'][season] = float(trend)
+        stats['trends'] = {
+            'linear_trend': np.polyfit(self.df['Year'], self.df['annual_temp'], 1)[0],
+            'quadratic_trend': np.polyfit(self.df['Year'], self.df['annual_temp'], 2)[0],
+            'rolling_std': self.df['annual_temp'].rolling(window=10).std().mean()
+        }
+        
+        stats['seasonal_trends'] = {
+            'DJF': np.polyfit(self.df['Year'], self.df['DJF'], 1)[0],
+            'MAM': np.polyfit(self.df['Year'], self.df['MAM'], 1)[0],
+            'JJA': np.polyfit(self.df['Year'], self.df['JJA'], 1)[0],
+            'SON': np.polyfit(self.df['Year'], self.df['SON'], 1)[0]
+        }
+        
+        stats['variability'] = {
+            'annual_std': self.df['annual_temp'].std(),
+            'monthly_std': self.df[['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']].std().mean(),
+            'seasonal_std': self.df[['DJF', 'MAM', 'JJA', 'SON']].std().mean()
+        }
         
         return stats
 
     def save_plot(self, fig, filename):
-        """Save a Plotly figure to HTML with proper configuration."""
-        if not os.path.exists('outputs'):
-            os.makedirs('outputs')
+        if not os.path.exists('plots'):
+            os.makedirs('plots')
         
-        # Configure the plot for serving
-        fig.update_layout(
-            template="plotly_dark",
-            showlegend=True,
-            hovermode='x unified'
-        )
-        
-        # Save with CDN resources
-        fig.write_html(
-            f'outputs/{filename}',
-            include_plotlyjs='cdn',
-            full_html=True,
-            config={'responsive': True}
-        )
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filepath = os.path.join('plots', f'{filename}_{timestamp}.html')
+        fig.write_html(filepath)
+        print(f"Plot saved to {filepath}")
 
 if __name__ == "__main__":
     # Initialize analysis
@@ -367,17 +324,22 @@ if __name__ == "__main__":
         f.write("Climate Analysis Statistics\n")
         f.write("=========================\n\n")
         f.write(f"Dataset: {analysis.dataset_type}\n")
-        f.write(f"Date Range: {stats['date_range']['start']} - {stats['date_range']['end']}\n\n")
-        
-        f.write("Overall Statistics:\n")
-        f.write(f"Mean Temperature Anomaly: {stats['overall']['mean']:.3f}°C\n")
-        f.write(f"Standard Deviation: {stats['overall']['std']:.3f}°C\n")
-        f.write(f"Temperature Trend: {stats['overall']['trend']:.4f}°C/year\n\n")
+        f.write(f"Year Range: {analysis.df['Year'].min()} - {analysis.df['Year'].max()}\n\n")
         
         f.write("Extreme Values:\n")
         f.write(f"Warmest Year: {stats['extremes']['warmest_year']} ({stats['extremes']['warmest_temp']:.3f}°C)\n")
         f.write(f"Coldest Year: {stats['extremes']['coldest_year']} ({stats['extremes']['coldest_temp']:.3f}°C)\n\n")
         
+        f.write("Temperature Trends:\n")
+        f.write(f"Linear Trend: {stats['trends']['linear_trend']:.4f}°C/year\n")
+        f.write(f"Quadratic Trend: {stats['trends']['quadratic_trend']:.4f}°C/year²\n")
+        f.write(f"10-Year Rolling Standard Deviation: {stats['trends']['rolling_std']:.4f}°C\n\n")
+        
         f.write("Seasonal Trends (°C/year):\n")
         for season, trend in stats['seasonal_trends'].items():
-            f.write(f"{season}: {trend:.4f}\n") 
+            f.write(f"{season}: {trend:.4f}\n")
+        
+        f.write("\nTemperature Variability:\n")
+        f.write(f"Annual Standard Deviation: {stats['variability']['annual_std']:.4f}°C\n")
+        f.write(f"Monthly Standard Deviation: {stats['variability']['monthly_std']:.4f}°C\n")
+        f.write(f"Seasonal Standard Deviation: {stats['variability']['seasonal_std']:.4f}°C\n") 
